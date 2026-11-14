@@ -12,6 +12,19 @@
 <div class="stagegrid"><div class="stagewrap"><div class="stagelabel">YOUR PHOTO</div><div class="stage" id="photoStage"><div class="placeholder">Your selfie will appear here.<br>Use a clear, front-facing photo with good lighting.</div></div></div><div class="stagewrap"><div class="stagelabel">JEWELLERY PREVIEW</div><div class="stage" id="resultStage"><div class="placeholder">Select a design and upload your photo to start.</div><div class="dragtip" id="dragtip" style="display:none">Drag jewellery to position</div></div></div></div>
 <div class="toolbar"><label>Size <input type="range" id="size" min="10" max="85" value="38"></label><label>Rotate <input type="range" id="rotate" min="-45" max="45" value="0"></label><label>Opacity <input type="range" id="opacity" min="25" max="100" value="90"></label><button class="btn secondary" id="center">Center item</button></div>
 <div class="actions"><button class="btn" id="save" disabled>↓ Save try-on image</button><button class="btn secondary" id="reset">Reset studio</button></div><div class="status" id="status" aria-live="polite">Select a jewellery design to begin.</div>
+<div class="sectiontitle">AI-powered realistic try-on</div>
+<div class="toolbar">
+<label class="hint" for="aiCategory">Jewellery type</label>
+<select id="aiCategory"><option value="ring">Ring</option><option value="necklace">Necklace</option><option value="earrings">Earrings</option><option value="bracelet">Bracelet</option></select>
+<button class="btn" id="generateAI" disabled>✦ Generate AI try-on</button>
+</div>
+<div class="hint">Select a catalogue design and upload your photo above. The AI uses both images to create an edited preview.</div>
+<div id="aiOutput" style="margin-top:14px;display:none">
+<div class="stagelabel">AI GENERATED RESULT</div>
+<img id="aiResult" alt="AI generated jewellery try-on" style="width:100%;max-height:650px;object-fit:contain;border-radius:14px;border:1px solid var(--line);background:#090706">
+<div class="actions"><a class="btn" id="downloadAI" download="nakshatra-ai-try-on.png">↓ Save AI result</a></div>
+</div>
+<div class="status" id="aiStatus" aria-live="polite">Choose a design and upload your photo to enable AI try-on.</div>
 <div class="warning"><b>Important:</b> This working version uses an adjustable photo overlay. You can move, resize and rotate the selected catalogue image and save the combined preview. It is not yet photorealistic AI fitting or automatic jewellery/face/body detection. For realistic necklace, earring and ring placement that preserves the customer's photo and product details, we still need to connect and test a generative try-on model and image-processing backend. We will not label this manual preview as AI-generated.</div>
 </section><div class="back"><a href="index.html#catalogue">← Back to all collections</a></div></main>
 <script>
@@ -28,4 +41,31 @@ $('photo').onchange=e=>{let f=e.target.files&&e.target.files[0];if(!f)return;if(
 $('clearPhoto').onclick=()=>{if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;photoImg=null;$('photo').value='';$('photoStage').innerHTML='<div class="placeholder">Your selfie will appear here.</div>';stage.innerHTML='<div class="placeholder">Upload your photo to start.</div>';$('dragtip').style.display='none';$('save').disabled=true;status.textContent='Photo removed.'};
 $('reset').onclick=()=>{if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;photoImg=null;selected=null;productImg=null;pos={x:50,y:52};$('photo').value='';$('photoStage').innerHTML='<div class="placeholder">Your selfie will appear here.</div>';stage.innerHTML='<div class="placeholder">Select a design and upload your photo to start.</div>';$('dragtip').style.display='none';$('save').disabled=true;$('size').value=38;$('rotate').value=0;$('opacity').value=90;document.querySelectorAll('.item').forEach(x=>x.classList.remove('active'));status.textContent='Studio reset.'};
 $('save').onclick=()=>{if(!photoImg||!productImg||!selected){status.textContent='Choose a product and upload your photo first.';return}let c=document.createElement('canvas'),w=photoImg.naturalWidth,h=photoImg.naturalHeight;c.width=w;c.height=h;let ctx=c.getContext('2d');ctx.drawImage(photoImg,0,0,w,h);let scale=Number($('size').value)/100*w;let ratio=productImg.naturalHeight/productImg.naturalWidth,dw=scale,dh=dw*ratio;let cx=pos.x/100*w,cy=pos.y/100*h;ctx.save();ctx.globalAlpha=Number($('opacity').value)/100;ctx.translate(cx,cy);ctx.rotate(Number($('rotate').value)*Math.PI/180);ctx.shadowColor='#0008';ctx.shadowBlur=w*.006;ctx.drawImage(productImg,-dw/2,-dh/2,dw,dh);ctx.restore();c.toBlob(blob=>{if(!blob){status.textContent='Could not create image. Try another photo.';return}let a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download='nakshatra-virtual-tryon.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);status.textContent='Your preview image has been saved.'},'image/png')};
+
+const aiButton=$('generateAI'), aiStatus=$('aiStatus'), aiOutput=$('aiOutput'), aiResult=$('aiResult'), downloadAI=$('downloadAI');
+function updateAIReady(){aiButton.disabled=!(selected && $('photo').files && $('photo').files[0]);}
+const originalChoose=choose;
+choose=function(id){originalChoose(id);updateAIReady()};
+$('photo').addEventListener('change',updateAIReady);
+aiButton.onclick=async()=>{
+ const file=$('photo').files&&$('photo').files[0];
+ if(!file||!selected){aiStatus.textContent='Upload a customer photo and select a jewellery design first.';return;}
+ const category=$('aiCategory').value;
+ const form=new FormData();
+ form.append('customer_photo',file,file.name);
+ const response=await fetch(selected.src);
+ if(!response.ok){aiStatus.textContent='Could not load the selected catalogue image.';return;}
+ const productBlob=await response.blob();
+ form.append('jewellery_photo',productBlob,selected.id+'.jpg');
+ form.append('category',category);
+ aiButton.disabled=true;aiButton.textContent='GENERATING…';aiStatus.textContent='AI is creating your realistic try-on. This may take a little while…';aiOutput.style.display='none';
+ try{
+  const api=window.NAKSHATRA_TRYON_API||'http://127.0.0.1:8000';
+  const res=await fetch(api+'/api/try-on',{method:'POST',body:form});
+  if(!res.ok){let msg='AI request failed ('+res.status+').';try{const d=await res.json();msg=d.detail||msg}catch{}throw new Error(msg)}
+  const blob=await res.blob();if(!blob.type.startsWith('image/'))throw new Error('The AI did not return an image.');
+  const url=URL.createObjectURL(blob);aiResult.src=url;downloadAI.href=url;aiOutput.style.display='block';aiStatus.textContent='AI try-on generated. Review the jewellery details and save your result.';
+ }catch(err){aiStatus.textContent=err.message.includes('Failed to fetch')?'Cannot reach the local AI engine. Start the backend using backend/README.md.':err.message}
+ finally{aiButton.disabled=false;aiButton.textContent='✦ Generate AI try-on';updateAIReady();}
+};
 </script></body></html>
