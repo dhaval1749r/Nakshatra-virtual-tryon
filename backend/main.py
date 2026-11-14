@@ -16,7 +16,7 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
-MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
+MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
 
 @app.get("/api/health")
 def health():
