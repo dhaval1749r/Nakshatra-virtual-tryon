@@ -1,0 +1,7 @@
+spaces
+gradio==5.50.0
+git+https://github.com/huggingface/diffusers
+transformers>=4.51.3
+accelerate>=1.2.0
+safetensors>=0.4.5
+Pillow>=11.1.0
