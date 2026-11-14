@@ -1,6 +1,11 @@
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0
+torchvision==0.21.0
+git+https://github.com/huggingface/diffusers
+transformers>=4.51.3
+accelerate>=1.2.0
+safetensors>=0.4.5
 fastapi==0.115.12
 uvicorn[standard]==0.34.0
 python-multipart==0.0.20
-google-genai==1.11.0
-Pillow==11.1.0
-python-dotenv==1.1.0
+Pillow>=11.1.0
