@@ -78,10 +78,10 @@ def chat(body: ChatRequest):
     messages.extend({"role": item.role, "content": item.content} for item in body.history[-10:])
     messages.append({"role": "user", "content": body.message})
     result = call_model({
-        "model": os.getenv("GROQ_CHAT_MODEL", "llama-3.1-8b-instant"),
+        "model": os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b"),
         "messages": messages,
         "temperature": 0.5,
-        "max_tokens": 500,
+        "max_completion_tokens": 700,
     })
     try:
         reply = result["choices"][0]["message"]["content"].strip()
