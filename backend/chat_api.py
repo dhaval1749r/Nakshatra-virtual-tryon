@@ -50,13 +50,13 @@ class ChatRequest(BaseModel):
 
 @app.get("/api/chat/health")
 def chat_health():
-    return {"ok": True, "configured": bool(os.getenv("OPENAI_API_KEY"))}
+    return {"ok": True, "configured": bool(os.getenv("GROQ_API_KEY"))}
 
 def call_model(payload: dict) -> dict:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise HTTPException(503, "AI chat is not configured. Add OPENAI_API_KEY to the backend environment.")
-    endpoint = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1/chat/completions")
+        raise HTTPException(503, "Free AI chat is not configured. Add GROQ_API_KEY to the backend environment.")
+    endpoint = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1/chat/completions")
     request = urllib.request.Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
@@ -78,7 +78,7 @@ def chat(body: ChatRequest):
     messages.extend({"role": item.role, "content": item.content} for item in body.history[-10:])
     messages.append({"role": "user", "content": body.message})
     result = call_model({
-        "model": os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+        "model": os.getenv("GROQ_CHAT_MODEL", "llama-3.1-8b-instant"),
         "messages": messages,
         "temperature": 0.5,
         "max_tokens": 500,
