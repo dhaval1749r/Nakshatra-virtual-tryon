@@ -18,8 +18,10 @@ GENERATION_LOCK = threading.Lock()
 
 app = FastAPI(title="Nakshatra AI Jewellery Try-On + Free Chat Assistant")
 from chat_api import app as chat_app
+from felo_image_api import router as felo_image_router
 
 app.include_router(chat_app.router)
+app.include_router(felo_image_router)
 
 app.add_middleware(
     CORSMiddleware,
