@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nakshatra Jewellers</title>
+<meta name="description" content="Nakshatra Jewellers. Silver rings with coloured stones, and a virtual try-on to see them on your hand.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="inner bar">
+    <a class="brand" href="#top">Nakshatra Jewellers</a>
+    <nav aria-label="Sections">
+      <a href="#rings">Rings</a>
+      <a href="#tryon">Try on</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="inner">
+      <h1>Rings with coloured stones, set in silver</h1>
+      <p>See a ring on your own hand before you visit the shop. Upload a photo and try it on.</p>
+      <p><a class="btn" href="#tryon">Try a ring on</a> <a class="btn line" href="#rings">See the rings</a></p>
+    </div>
+  </section>
+
+  <section id="rings" class="block">
+    <div class="inner">
+      <h2>Rings</h2>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section id="tryon" class="block alt">
+    <div class="inner">
+      <h2>Try a ring on</h2>
+      <p class="lead">Use a clear, well-lit photo of the back of your hand with the fingers visible.</p>
+      <div class="studio">
+        <div class="stage">
+          <canvas id="cv" width="800" height="600" aria-label="Try-on preview"></canvas>
+        </div>
+        <div class="controls">
+          <div class="step">
+            <h3>1. Choose a ring</h3>
+            <div class="picks" id="picks"></div>
+          </div>
+          <div class="step">
+            <h3>2. Add your hand photo</h3>
+            <input type="file" id="file" accept="image/*" hidden>
+            <button class="btn" id="upload" type="button">Upload photo</button>
+          </div>
+          <div class="step">
+            <h3>3. Finger</h3>
+            <div class="seg" id="fingers" role="group" aria-label="Finger">
+              <button type="button" data-f="index" aria-pressed="false">Index</button>
+              <button type="button" data-f="middle" aria-pressed="false">Middle</button>
+              <button type="button" data-f="ring" aria-pressed="true">Ring</button>
+              <button type="button" data-f="pinky" aria-pressed="false">Little</button>
+            </div>
+          </div>
+          <div class="step">
+            <h3>4. Adjust</h3>
+            <label class="slider">Size <input type="range" id="size" min="50" max="200" value="100"><output id="sizeO">100%</output></label>
+            <label class="slider">Turn <input type="range" id="rot" min="-180" max="180" value="0"><output id="rotO">0°</output></label>
+            <p class="hint">Tap or drag on the photo to move the ring.</p>
+            <button class="btn line" id="save" type="button" disabled>Save image</button>
+          </div>
+          <p class="status" id="status" role="status" aria-live="polite">Choose a ring and add a photo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="inner">© 2026 Nakshatra Jewellers</div>
+</footer>
+
+<button class="chatbtn" id="chatBtn" type="button" aria-expanded="false" aria-controls="chat">Chat with us</button>
+<aside class="chat" id="chat" hidden aria-label="Chat">
+  <div class="chathead"><strong>Chat with Nakshatra</strong><button type="button" id="chatClose" aria-label="Close chat">×</button></div>
+  <div class="msgs" id="msgs" aria-live="polite"></div>
+  <div class="faq" id="faq"></div>
+  <form class="chatform" id="chatForm" hidden>
+    <input type="text" id="chatIn" placeholder="Type your question" aria-label="Your question" autocomplete="off">
+    <button class="btn" type="submit" id="chatSend">Send</button>
+  </form>
+</aside>
+
+<script src="products.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
