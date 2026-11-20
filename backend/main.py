@@ -16,7 +16,11 @@ PIPELINE = None
 PIPELINE_LOCK = threading.Lock()
 GENERATION_LOCK = threading.Lock()
 
-app = FastAPI(title="Nakshatra AI Jewellery Try-On - Qwen")
+app = FastAPI(title="Nakshatra AI Jewellery Try-On + Free Chat Assistant")
+from chat_api import app as chat_app
+
+app.include_router(chat_app.router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
