@@ -23,7 +23,7 @@ async function answer(q){
  const typing=document.createElement('div');typing.className='msg';typing.textContent='Nakshatra assistant is thinking…';msgs.append(typing);msgs.scrollTop=msgs.scrollHeight;
  if(!CHAT_API_URL){typing.textContent='I’m sorry, the intelligent assistant is not connected yet. Please try again shortly or contact our team on WhatsApp: 080872 78272.';return}
  try{
-  const response=await fetch(CHAT_API_URL.replace(/\\/$/,'')+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history:chatHistory.slice(-10)})});
+  const response=await fetch(CHAT_API_URL.replace(/\/+$/,'')+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history:chatHistory.slice(-10)})});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||'Assistant temporarily unavailable.');
   const reply=String(data.reply||'I could not prepare an answer just now. Please try again.');
   chatHistory.push({role:'user',content:q},{role:'assistant',content:reply});typing.textContent=reply;
