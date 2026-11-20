@@ -19,6 +19,8 @@
 <div class="sectiontitle">Jewellery type</div><select class="select" id="category"><option value="ring">Ring</option><option value="necklace">Necklace</option><option value="earrings">Earrings</option><option value="bracelet">Bracelet</option></select>
 <div class="preview"><div class="previewbox"><div class="stagelabel">YOUR PHOTO</div><div class="imagebox" id="photoPreview">Upload a clear photo to begin</div></div><div class="previewbox"><div class="stagelabel">AI-GENERATED PREVIEW</div><div class="imagebox" id="resultPreview">Your AI-generated jewellery result will appear here</div></div></div>
 <div class="actions"><button class="btn" id="generate" disabled>✦ Generate preview</button><a class="btn" id="download" download="nakshatra-ai-try-on.png" style="display:none;text-decoration:none">↓ Save result</a></div>
+<div class="actions" style="margin-top:12px"><button class="btn secondary" id="bingGenerate" type="button" disabled>✦ Continue with Bing Image Creator</button><button class="btn secondary" id="copyBingPrompt" type="button" disabled>Copy AI prompt</button></div>
+<div class="hint">Bing opens in a new tab. Upload your photo and the selected jewellery reference there, then paste the prepared prompt. After generation, download the result and return here. This is a manual hand-off; Bing does not send the image back to this website automatically.</div>
 <div class="status" id="status" aria-live="polite">Select a design and upload your photo. AI generation will be available when the AI service is connected.</div>
 <div class="hint">For best results, use a clear, well-lit photo with the relevant body part visible. AI-generated results may vary and should be reviewed.</div>
 </section><div class="back"><a href="index.html#catalogue">← Back to all collections</a></div>
@@ -59,6 +61,25 @@ async function generateRealTryOn(){
  }catch(e){$('status').textContent=e.message||'AI service is temporarily unavailable. The Space may still be building or waiting for a GPU.'}
  finally{btn.disabled=!(selected&&photoFile);btn.textContent='✦ Generate AI try-on'}
 }
+
+function makeBingPrompt(){
+ if(!selected)return '';
+ const category=$('category').value;
+ const names={ring:'ring on a visible suitable finger',necklace:'necklace naturally around the neck and collarbone',earrings:'earrings on visible earlobes',bracelet:'bracelet naturally around a visible wrist'};
+ return 'Edit the uploaded CUSTOMER PHOTO using the uploaded NAKSHATRA JEWELLERY PRODUCT PHOTO as the exact reference. Create a photorealistic virtual try-on. Place the exact '+selected.name+' ('+category+') '+names[category]+'. Preserve the customer identity, face, skin tone, body, hands, clothing, pose, background, camera angle and lighting. Preserve the exact jewellery design, gemstone count, metal colour, setting, proportions and details from the product reference. Do not redesign, simplify, duplicate or substitute the jewellery. Match realistic scale, perspective, reflections, contact shadows and natural occlusion. Make only the minimum edit required to add the jewellery. Return one natural-looking edited photograph, with no text, watermark, collage or border.';
+}
+function openBingCreator(){
+ if(!selected||!photoFile)return;
+ const prompt=makeBingPrompt();
+ const url='https://www.bing.com/images/create?q='+encodeURIComponent(prompt);
+ window.open(url,'_blank','noopener');
+ $('status').textContent='Bing Image Creator opened in a new tab. Upload your customer photo and the selected jewellery reference, then paste the prepared prompt. When done, download the result and return to this page.';
+}
+$('bingGenerate').onclick=openBingCreator;
+$('copyBingPrompt').onclick=async()=>{try{await navigator.clipboard.writeText(makeBingPrompt());$('status').textContent='Bing prompt copied. Open Bing Image Creator and paste it after uploading both images.'}catch(e){$('status').textContent='Clipboard permission unavailable. Use Continue with Bing to open the prompt link.'}};
+const originalReady=ready;
+ready=function(){originalReady();$('bingGenerate').disabled=!(selected&&photoFile);$('copyBingPrompt').disabled=!(selected&&photoFile)};
+
 $('generate').onclick=generateRealTryOn;
 </script>
 </body></html>
