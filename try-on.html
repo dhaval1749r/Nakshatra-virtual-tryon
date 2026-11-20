@@ -47,7 +47,6 @@ async function generateRealTryOn(){
   $('status').textContent='Connecting to the shared AI GPU queue…';
   const client=await Client.connect(spaceId);
 
-  const client=await Client.connect('dhaval1749r/nakshatra-ai-tryon');
   const productResponse=await fetch(selected.src);
   if(!productResponse.ok)throw new Error('Could not load the selected jewellery design.');
   const productBlob=await productResponse.blob();
