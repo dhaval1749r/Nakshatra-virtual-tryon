@@ -21,7 +21,7 @@
 <div class="actions"><button class="btn" id="generate" disabled>✦ Generate preview</button><a class="btn" id="download" download="nakshatra-ai-try-on.png" style="display:none;text-decoration:none">↓ Save result</a></div>
 <div class="actions" style="margin-top:12px"><button class="btn secondary" id="bingGenerate" type="button" disabled>✦ Continue with Bing Image Creator</button><button class="btn secondary" id="copyBingPrompt" type="button" disabled>Copy AI prompt</button></div>
 <div class="hint">Bing opens in a new tab. Upload your photo and the selected jewellery reference there, then paste the prepared prompt. After generation, download the result and return here. This is a manual hand-off; Bing does not send the image back to this website automatically.</div>
-<div class="status" id="status" aria-live="polite">Select a design and upload your photo. AI generation will be available when the AI service is connected.</div>
+<div class="status" id="status" aria-live="polite">Select a design and upload your photo. Connect the Felo API backend to enable AI generation directly on this page.</div>
 <div class="hint">For best results, use a clear, well-lit photo with the relevant body part visible. AI-generated results may vary and should be reviewed.</div>
 </section><div class="back"><a href="index.html#catalogue">← Back to all collections</a></div>
 </main>
@@ -44,6 +44,25 @@ async function generateRealTryOn(){
  const btn=$('generate');btn.disabled=true;btn.textContent='GENERATING AI TRY-ON…';
  $('status').textContent='Connecting to Nakshatra AI…';
  try{
+  const apiBase=String(window.NAKSHATRA_CHAT_API_URL||window.NAKSHATRA_TRYON_API||'').trim().replace(/\\/+$/,'');
+  if(apiBase){
+   const productResponse=await fetch(selected.src);
+   if(!productResponse.ok)throw new Error('Could not load the selected jewellery design.');
+   const form=new FormData();
+   form.append('customer_photo',photoFile,photoFile.name||'customer-photo.jpg');
+   form.append('jewellery_photo',await productResponse.blob(),selected.id+'.jpg');
+   form.append('category',$('category').value);
+   $('status').textContent='Felo AI is creating your jewellery preview. Please wait…';
+   const response=await fetch(apiBase+'/api/felo/try-on',{method:'POST',body:form});
+   if(!response.ok){let message='Felo AI could not generate the image.';try{const data=await response.json();message=data.detail||message}catch(e){}throw new Error(message)}
+   const imageBlob=await response.blob();
+   const imageUrl=URL.createObjectURL(imageBlob);
+   $('resultPreview').innerHTML='';
+   const image=new Image();image.src=imageUrl;image.alt='Felo AI-generated Nakshatra jewellery try-on';$('resultPreview').append(image);
+   $('download').href=imageUrl;$('download').style.display='inline-flex';
+   $('status').textContent='Felo AI preview generated. Please review the jewellery details.';
+   return;
+  }
   const {Client}=await import('https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js');
   const client=await Client.connect('dhaval1749r/nakshatra-ai-tryon');
   const productResponse=await fetch(selected.src);
