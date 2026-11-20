@@ -17,9 +17,11 @@ Photorealistic multi-image jewellery editing for the Nakshatra Jewellers website
 
 1. Create a public Gradio Space named `nakshatra-ai-tryon` under the Hugging Face account `dhaval1749r`.
 2. In the Space Settings, select ZeroGPU hardware. Do not select paid GPU hardware.
-3. Upload the contents of this folder (`app.py`, `requirements.txt`, and this README) to the root of that Space.
-4. Wait for the Space to build and become Running.
-5. The website connects to `dhaval1749r/nakshatra-ai-tryon` through the Gradio API endpoint `/try_on`.
+3. Create a Hugging Face fine-grained access token with **write access only to this Space**.
+4. In GitHub, open this repository's Settings → Secrets and variables → Actions → New repository secret. Name it `HF_TOKEN` and paste the token there (never into chat or source code).
+5. In GitHub Actions, run **Deploy Nakshatra AI Try-On to Hugging Face**. It uploads this folder automatically. Future changes under `hf-space/` deploy on push.
+6. Wait for the Space to build and become Running.
+7. The website connects to `dhaval1749r/nakshatra-ai-tryon` through the Gradio API endpoint `/try_on`.
 
 Free personal accounts can host up to two ZeroGPU Spaces only when the account is in good standing, email-verified, and older than 30 days. Free accounts receive five minutes of shared GPU quota per day; queue delays and cold starts are expected. Do not add billing details or select paid hardware.
 
