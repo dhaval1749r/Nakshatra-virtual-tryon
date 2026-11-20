@@ -31,7 +31,9 @@ You are collaborating on the existing Nakshatra Jewellers website. Read this fil
 - Current candidate is `Qwen/Qwen-Image-Edit-2509` through Diffusers with two input images.
 - Hugging Face ZeroGPU supports Gradio Spaces, requires the Space hardware to be set to ZeroGPU, and requires `spaces.GPU` on GPU functions.
 - Model loading belongs at module scope for ZeroGPU CUDA emulation; do not move model loading into the decorated function.
-- Free personal ZeroGPU quota is limited (currently five GPU minutes/day) and shared across all visitors. Do not promise unlimited or high-volume production.
+- Free personal ZeroGPU quota is limited (currently five GPU minutes/day) and shared across all visitors. It is a prototype/benchmark route, not a solution for 200+ daily generations.
+- Cloudflare Workers AI offers 10,000 free Neurons/day; estimates for FLUX.1 Schnell are around 170 1024px text-to-image generations/day at four steps, but that is not a validated dual-reference jewellery try-on service. Do not count this as meeting the 200/day target until the actual image-edit model, quality and quota are measured.
+- For the 200/day target, compare a low-cost dedicated GPU / commercial inference plan against a realistic free-tier prototype. Do not switch to sticker compositing or generic text-to-image to inflate generation counts.
 - Never replace the AI image editing with a sticker overlay and call it AI.
 - If a model cannot preserve jewellery fidelity, report the limitation and benchmark alternatives rather than claiming it is perfect.
 
