@@ -1,0 +1,37 @@
+name: Deploy Nakshatra AI Try-On to Hugging Face
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'hf-space/**'
+      - '.github/workflows/deploy-hf-space.yml'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Hugging Face Hub client
+        run: pip install --upgrade huggingface_hub
+      - name: Upload Space files
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          token = os.environ.get('HF_TOKEN')
+          if not token:
+              raise SystemExit('Missing GitHub Actions secret HF_TOKEN')
+          HfApi().upload_folder(
+              repo_id='dhaval1749r/nakshatra-ai-tryon',
+              repo_type='space',
+              folder_path='hf-space',
+              token=token,
+              commit_message='Deploy Nakshatra AI try-on Space',
+          )
+          PY
