@@ -14,7 +14,7 @@ No build step and no framework. Open `index.html` through any web server.
 1. The customer picks a ring and uploads a photo of the back of their hand.
 2. MediaPipe Hands finds the 21 hand points. The ring is placed on the chosen finger, turned to follow the finger.
 3. The size comes from the hand: the distance between the index and little-finger knuckles is taken as about 68 mm, and `widthMm` in `products.js` is the ring's width across the finger.
-4. If no hand is found, the customer taps the photo to place the ring. Size and turn can always be adjusted.
+4. If no hand is found, the customer taps the photo to place the ring.
 
 ## Adding a ring
 1. Make a cut-out PNG of the ring (transparent background). Rotate it so the fingertip direction points up.

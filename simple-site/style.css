@@ -73,3 +73,6 @@ footer.site{border-top:1px solid var(--line);padding:24px 0 96px;color:var(--mut
   .studio{grid-template-columns:minmax(0,1fr)}
   .hero{padding:36px 0 32px}
 }
+
+.file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.file:focus-visible + label{outline:2px solid var(--gold);outline-offset:2px}

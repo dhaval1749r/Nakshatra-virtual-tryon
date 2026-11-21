@@ -24,6 +24,7 @@
   var sel = P[0], finger = 'ring', photo = null, W = 800, H = 600, hand = null, ppm = 0;
   var ring = { x: 0, y: 0, heading: 0 }, sizeMult = 1, rotOff = 0, placed = false;
   var cuts = {};
+  var FMM = { index: 17, middle: 18, ring: 16, pinky: 14 };   // typical finger widths, mm
   P.forEach(function (p) { var i = new Image(); i.onload = draw; i.src = p.cut; cuts[p.id] = i; });
   var MCP = { index: 5, middle: 9, ring: 13, pinky: 17 };
 
@@ -47,8 +48,6 @@
     document.querySelectorAll('#fingers button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
     if (hand) { placeOnFinger(); draw(); }
   });
-  $('#size').oninput = function (e) { sizeMult = +e.target.value / 100; $('#sizeO').textContent = e.target.value + '%'; draw(); };
-  $('#rot').oninput = function (e) { rotOff = +e.target.value; $('#rotO').textContent = e.target.value + '°'; draw(); };
 
   function draw() {
     ctx.clearRect(0, 0, cv.width, cv.height);
@@ -61,13 +60,32 @@
     ctx.drawImage(photo, 0, 0, W, H);
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
-    var wpx = sel.widthMm * (ppm || W * 0.0045) * sizeMult, s = wpx / sel.cw;
+    var mm = ppm || W * 0.0045, wpx = sel.widthMm * mm * sizeMult, s = wpx / sel.cw;
     ctx.save();
     ctx.translate(ring.x, ring.y);
     ctx.rotate((ring.heading + rotOff) * Math.PI / 180);
+    drawBand(mm);
     ctx.scale(s, s);
     ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6 / s; ctx.shadowOffsetY = 2 / s;
     ctx.drawImage(img, -sel.cw / 2, -sel.ch / 2);
+    ctx.restore();
+  }
+
+  /* The silver band that goes round the finger. It sits under the stone, is darker where it turns away
+     at the sides of the finger, and throws a soft shadow on the skin, so the ring looks worn. */
+  function drawBand(mm) {
+    var fw = FMM[finger] * mm * 1.04, t = Math.max(3, 2.3 * mm), cx = fw / 2;
+    var g = ctx.createLinearGradient(-cx, 0, cx, 0);
+    g.addColorStop(0, 'rgba(110,114,122,0)'); g.addColorStop(0.07, 'rgba(110,114,122,.95)'); g.addColorStop(0.22, '#bfc3ca');
+    g.addColorStop(0.5, '#fbfbfc'); g.addColorStop(0.78, '#bfc3ca'); g.addColorStop(0.93, 'rgba(110,114,122,.95)'); g.addColorStop(1, 'rgba(110,114,122,0)');
+    ctx.save();
+    ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.12, cx, 0);
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = t * 1.4; ctx.shadowOffsetY = t * 0.5;
+    ctx.strokeStyle = 'rgba(70,72,80,.9)'; ctx.lineWidth = t + 1.5; ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.12, cx, 0);
+    ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
     ctx.restore();
   }
 
@@ -108,26 +126,25 @@
     placed = true;
   }
 
-  $('#upload').onclick = function () { $('#file').click(); };
   $('#file').onchange = async function (e) {
     var f = e.target.files && e.target.files[0]; if (!f) return;
     try {
-      var bmp = await (window.createImageBitmap ? createImageBitmap(f, { imageOrientation: 'from-image' }) : Promise.reject());
-      var sc = Math.min(1, 1100 / Math.max(bmp.width, bmp.height));
-      W = Math.round(bmp.width * sc); H = Math.round(bmp.height * sc);
+      var bmp = await new Promise(function (res, rej) { var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('image')); }; im.src = u; });
+      var sc = Math.min(1, 1100 / Math.max(bmp.naturalWidth, bmp.naturalHeight));
+      W = Math.round(bmp.naturalWidth * sc); H = Math.round(bmp.naturalHeight * sc);
       var off = document.createElement('canvas'); off.width = W; off.height = H; off.getContext('2d').drawImage(bmp, 0, 0, W, H);
       photo = off; cv.width = W; cv.height = H;
-    } catch (err) { setStatus('That file could not be read as an image.', true); return; }
+    } catch (err) { setStatus('That file could not be opened as a picture. Please use a JPG or PNG photo.', true); return; }
     e.target.value = '';
     hand = null; placed = false; ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0;
     $('#save').disabled = false; draw();
     setStatus('Finding your hand…');
     try {
       hand = await detect();
-      if (hand) { placeOnFinger(); setStatus('Ring placed on your ' + (finger === 'pinky' ? 'little' : finger) + ' finger. Drag it, or change the size and turn, to fit.'); }
-      else { placed = true; setStatus('No hand found in this photo. Tap on the photo to place the ring, then adjust the size.', true); }
+      if (hand) { placeOnFinger(); setStatus('Ring placed on your ' + (finger === 'pinky' ? 'little' : finger) + ' finger. Drag it if you want to move it.'); }
+      else { placed = true; setStatus('No hand found in this photo. Tap on the photo where the ring should go.', true); }
     } catch (err) {
-      placed = true; setStatus('Hand detection did not start here. Tap on the photo to place the ring, then adjust the size.', true);
+      placed = true; setStatus('Hand detection did not start here. Tap on the photo where the ring should go.', true);
     }
     draw();
   };
@@ -152,7 +169,7 @@
   /* ---------- chat ---------- */
   var FAQ = [
     ['What are the rings made of?', 'These three rings are silver with coloured stones and a halo of small white stones.'],
-    ['How does the try-on work?', 'Choose a ring, add a clear photo of the back of your hand and the ring is placed on your finger. You can drag it, and change its size, to fit.'],
+    ['How does the try-on work?', 'Choose a ring, add a clear photo of the back of your hand and the ring is placed on your finger. The size comes from your hand.'],
     ['What is the price?', 'The price depends on the ring and on the day. Please contact the shop and we will confirm the price for the ring you like.'],
     ['How do I buy?', 'Tell the shop which ring you like. This website does not take payments.']
   ];
