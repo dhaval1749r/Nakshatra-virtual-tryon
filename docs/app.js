@@ -108,18 +108,18 @@
   /* The thin silver band round the finger: bright in the middle, darker where it turns away,
      and its ends take the skin colour so it seems to go behind the finger. */
   function drawBand(mm, sk) {
-    var fw = FINGER_MM * mm * 1.08, t = Math.max(2, 1.7 * mm), cx = fw / 2;
+    var fw = FINGER_MM * mm * 1.08, t = Math.max(2, 1.05 * mm), cx = fw / 2;
     var L = sk.light, c = function (v) { return Math.round(Math.min(255, v * L)); };
     var skin = sk.r + ',' + sk.g + ',' + sk.b;
     var g = ctx.createLinearGradient(-cx, 0, cx, 0);
-    g.addColorStop(0, 'rgba(' + skin + ',0)'); g.addColorStop(0.08, 'rgba(' + [c(105), c(108), c(114)] + ',.9)'); g.addColorStop(0.24, 'rgb(' + [c(185), c(189), c(196)] + ')');
-    g.addColorStop(0.5, 'rgb(' + [c(245), c(246), c(248)] + ')'); g.addColorStop(0.76, 'rgb(' + [c(185), c(189), c(196)] + ')');
-    g.addColorStop(0.92, 'rgba(' + [c(105), c(108), c(114)] + ',.9)'); g.addColorStop(1, 'rgba(' + skin + ',0)');
+    g.addColorStop(0, 'rgba(' + skin + ',0)'); g.addColorStop(0.1, 'rgba(' + [c(150), c(154), c(162)] + ',.85)'); g.addColorStop(0.28, 'rgb(' + [c(212), c(215), c(221)] + ')');
+    g.addColorStop(0.5, 'rgb(' + [c(250), c(251), c(253)] + ')'); g.addColorStop(0.72, 'rgb(' + [c(212), c(215), c(221)] + ')');
+    g.addColorStop(0.9, 'rgba(' + [c(150), c(154), c(162)] + ',.85)'); g.addColorStop(1, 'rgba(' + skin + ',0)');
     ctx.save();
     ctx.lineCap = 'butt';
     var path = function () { ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0); };
-    path(); ctx.shadowColor = 'rgba(30,12,6,.38)'; ctx.shadowBlur = t * 1.8; ctx.shadowOffsetY = t * 0.7;
-    ctx.strokeStyle = 'rgba(' + [c(75), c(77), c(84)] + ',.8)'; ctx.lineWidth = t + 0.8; ctx.stroke();
+    path(); ctx.shadowColor = 'rgba(30,12,6,.38)'; ctx.shadowBlur = t * 1.8; ctx.shadowOffsetY = t * 0.9;
+    ctx.strokeStyle = 'rgba(' + [c(95), c(99), c(108)] + ',.55)'; ctx.lineWidth = t + 0.6; ctx.stroke();
     ctx.shadowColor = 'transparent';
     path(); ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
     ctx.restore();
@@ -154,19 +154,26 @@
     return { lm: best, palm: bestW };
   }
   /* Inside the Claude preview page the hand files cannot be loaded, so Claude finds the finger from the photo instead. */
-  var FIND_PROMPT = 'This photo shows a hand. Find the ring finger (the finger next to the little finger) of the hand that is closest to the camera, so a ring can be placed on it. Reply with only one JSON object: ' +
-    '{"found":true,"base":{"x":0.0,"y":0.0},"tip":{"x":0.0,"y":0.0},"width":0.0}. ' +
-    'base is the centre of the finger\'s lower segment, between the knuckle where it joins the hand and the first joint, which is where a ring sits. tip is the very end of that finger. ' +
-    'width is the thickness of the finger at base as a fraction of the image width. All x and y values are fractions from 0 to 1 of the image width and height from the top-left corner. ' +
-    'If the ring finger is not clearly visible reply {"found":false}.';
+  var FIND_PROMPT = 'This photo shows a hand. Look at the hand closest to the camera. List its four fingers other than the thumb, in order starting from the finger next to the thumb: index, middle, ring, little. ' +
+    'For each finger give: tip = the very end of the finger; base = the centre of the finger\'s lower segment, between the knuckle where it joins the hand and the first joint (where a ring sits); width = the thickness of the finger at base as a fraction of the image width. ' +
+    'All x and y values are fractions from 0 to 1 of the image width and height, from the top-left corner. ' +
+    'Reply with only one JSON object: {"found":true,"fingers":[{"name":"index","tip":{"x":0.0,"y":0.0},"base":{"x":0.0,"y":0.0},"width":0.0},{"name":"middle",...},{"name":"ring",...},{"name":"little",...}]}. ' +
+    'If the fingers are not clearly visible reply {"found":false}.';
   function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  function okFinger(f) { return f && f.tip && f.base && isNum(f.tip.x) && isNum(f.tip.y) && isNum(f.base.x) && isNum(f.base.y) && isNum(f.width) && f.width > 0.01 && f.width < 0.6; }
   async function claudeFinger() {
     var c = window.claude; if (!c || !c.use || !photoBlob) return null;
     var ai = await c.use('sample'); if (!ai) return null;
     var lim = await ai.limits(); if (!lim || !lim.images) return null;
     var r = await ai.json(FIND_PROMPT, { images: photoBlob });
-    if (!r || r.found === false || !r.base || !r.tip || !isNum(r.base.x) || !isNum(r.base.y) || !isNum(r.tip.x) || !isNum(r.tip.y) || !isNum(r.width) || r.width < 0.01 || r.width > 0.6) return null;
-    return r;
+    if (!r || r.found === false || !Array.isArray(r.fingers)) return null;
+    var fs = r.fingers.filter(okFinger); if (!fs.length) return null;
+    var f = null;
+    r.fingers.forEach(function (x) { if (okFinger(x) && /ring/i.test(String(x.name || ''))) f = x; });
+    if (!f && r.fingers.length >= 3 && okFinger(r.fingers[2])) f = r.fingers[2];
+    if (!f) return null;
+    var ws = fs.map(function (x) { return x.width; }).sort(function (p, q) { return p - q; }), med = ws[Math.floor(ws.length / 2)];
+    return { base: f.base, tip: f.tip, width: Math.max(0.75 * med, Math.min(1.25 * med, f.width)) };   // a finger is about as thick as its neighbours
   }
   async function localPreview() {
     placed = false; manual = false; hand = null;
