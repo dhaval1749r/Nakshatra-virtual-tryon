@@ -60,31 +60,68 @@
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
     var mm = ppm || W * 0.0095, s = sel.widthMm * mm / sel.cw;
+    var rad = ring.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // direction along the finger, towards the tip
+    var sk = skinAround(ring.x, ring.y, ux, uy, FINGER_MM * mm * 0.9);                // skin colour and light of this photo
     ctx.save();
     ctx.translate(ring.x, ring.y);
-    ctx.rotate(ring.heading * Math.PI / 180);
-    drawBand(mm);
-    ctx.scale(s, s);
-    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 3.5 * mm / s; ctx.shadowOffsetY = 1.2 * mm / s;
-    ctx.drawImage(img, -sel.cw / 2, -sel.ch / 2);
+    ctx.rotate(rad);
+    contactShadow(mm, s, sel);
+    drawBand(mm, sk);
+    // the ring photo, matched to the light and skin colour of the customer's photo
+    var pw = Math.max(2, Math.round(sel.cw * s)), ph = Math.max(2, Math.round(sel.ch * s));
+    var oc = document.createElement('canvas'); oc.width = pw; oc.height = ph;
+    var ox = oc.getContext('2d'); ox.imageSmoothingQuality = 'high';
+    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.min(0.7, 0.04 * mm + 0.15).toFixed(2) + 'px)';
+    ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
+    ox.globalCompositeOperation = 'source-atop';
+    ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
+    ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
+    ctx.drawImage(oc, -pw / 2, -ph / 2);
     ctx.restore();
   }
 
-  /* The silver band that goes round the finger. It sits under the stone, is darker where it turns away
-     at the sides of the finger, and throws a soft shadow on the skin, so the ring looks worn. */
-  function drawBand(mm) {
-    var fw = FINGER_MM * mm * 1.1, t = Math.max(2, 1.7 * mm), cx = fw / 2;
+  /* average skin colour on the finger just above and below the ring, and how bright the photo is there */
+  function skinAround(x, y, ux, uy, d) {
+    var r = 0, g = 0, b = 0, n = 0, rr = Math.max(3, Math.round(d * 0.12));
+    var pts = [[x + ux * d, y + uy * d], [x - ux * d, y - uy * d]];
+    pts.forEach(function (p) {
+      var x0 = Math.max(0, Math.min(W - 1, Math.round(p[0] - rr))), y0 = Math.max(0, Math.min(H - 1, Math.round(p[1] - rr)));
+      var w = Math.min(2 * rr, W - x0), h = Math.min(2 * rr, H - y0); if (w < 1 || h < 1) return;
+      var dt; try { dt = photo.getContext('2d').getImageData(x0, y0, w, h).data; } catch (e) { return; }
+      for (var i = 0; i < dt.length; i += 4) { r += dt[i]; g += dt[i + 1]; b += dt[i + 2]; n++; }
+    });
+    if (!n) return { r: 180, g: 130, b: 110, light: 1 };
+    r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+    var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    return { r: r, g: g, b: b, light: Math.max(0.72, Math.min(1.04, 0.62 + lum / 330)) };
+  }
+
+  /* soft dark patch on the skin under the stone, where the ring lifts off the finger */
+  function contactShadow(mm, s, p) {
+    var hw = p.widthMm * mm * 0.62, hh = p.widthMm * (p.ch / p.cw) * mm * 0.55;
+    ctx.save(); ctx.translate(0, mm * 1.1); ctx.scale(1, hh / hw);
+    var g = ctx.createRadialGradient(0, 0, hw * 0.25, 0, 0, hw);
+    g.addColorStop(0, 'rgba(25,10,5,.34)'); g.addColorStop(0.6, 'rgba(25,10,5,.16)'); g.addColorStop(1, 'rgba(25,10,5,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, hw, 0, 7); ctx.fill(); ctx.restore();
+  }
+
+  /* The thin silver band round the finger: bright in the middle, darker where it turns away,
+     and its ends take the skin colour so it seems to go behind the finger. */
+  function drawBand(mm, sk) {
+    var fw = FINGER_MM * mm * 1.08, t = Math.max(2, 1.7 * mm), cx = fw / 2;
+    var L = sk.light, c = function (v) { return Math.round(Math.min(255, v * L)); };
+    var skin = sk.r + ',' + sk.g + ',' + sk.b;
     var g = ctx.createLinearGradient(-cx, 0, cx, 0);
-    g.addColorStop(0, 'rgba(110,114,122,0)'); g.addColorStop(0.07, 'rgba(110,114,122,.95)'); g.addColorStop(0.22, '#bfc3ca');
-    g.addColorStop(0.5, '#fbfbfc'); g.addColorStop(0.78, '#bfc3ca'); g.addColorStop(0.93, 'rgba(110,114,122,.95)'); g.addColorStop(1, 'rgba(110,114,122,0)');
+    g.addColorStop(0, 'rgba(' + skin + ',0)'); g.addColorStop(0.08, 'rgba(' + [c(105), c(108), c(114)] + ',.9)'); g.addColorStop(0.24, 'rgb(' + [c(185), c(189), c(196)] + ')');
+    g.addColorStop(0.5, 'rgb(' + [c(245), c(246), c(248)] + ')'); g.addColorStop(0.76, 'rgb(' + [c(185), c(189), c(196)] + ')');
+    g.addColorStop(0.92, 'rgba(' + [c(105), c(108), c(114)] + ',.9)'); g.addColorStop(1, 'rgba(' + skin + ',0)');
     ctx.save();
     ctx.lineCap = 'butt';
-    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0);
-    ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = t * 1.6; ctx.shadowOffsetY = t * 0.6;
-    ctx.strokeStyle = 'rgba(80,82,90,.85)'; ctx.lineWidth = t + 1; ctx.stroke();
+    var path = function () { ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0); };
+    path(); ctx.shadowColor = 'rgba(30,12,6,.38)'; ctx.shadowBlur = t * 1.8; ctx.shadowOffsetY = t * 0.7;
+    ctx.strokeStyle = 'rgba(' + [c(75), c(77), c(84)] + ',.8)'; ctx.lineWidth = t + 0.8; ctx.stroke();
     ctx.shadowColor = 'transparent';
-    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0);
-    ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
+    path(); ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
     ctx.restore();
   }
 
