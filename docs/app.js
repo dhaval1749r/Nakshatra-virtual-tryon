@@ -108,7 +108,7 @@
   /* The thin silver band round the finger: bright in the middle, darker where it turns away,
      and its ends take the skin colour so it seems to go behind the finger. */
   function drawBand(mm, sk) {
-    var fw = FINGER_MM * mm * 1.08, t = Math.max(2, 1.05 * mm), cx = fw / 2;
+    var fw = FINGER_MM * mm * 1.12, t = Math.max(2, 1.05 * mm), cx = fw / 2;
     var L = sk.light, c = function (v) { return Math.round(Math.min(255, v * L)); };
     var skin = sk.r + ',' + sk.g + ',' + sk.b;
     var g = ctx.createLinearGradient(-cx, 0, cx, 0);
@@ -205,7 +205,14 @@
     var ax = -best.dy, ay = best.dx;                                       // along the finger
     var up = run(cx, cy, ax, ay), down = run(cx, cy, -ax, -ay);
     if (down < up) { ax = -ax; ay = -ay; }                                 // tip is the side where the finger ends sooner
-    return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c };
+    return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c, tip: Math.min(up, down) };
+  }
+  /* A ring sits on the lower part of the finger, about 2.7 finger-widths from the tip. Slide the point there and measure again. */
+  function settle(rf) {
+    var d = rf.tip - 2.7 * rf.fw;
+    if (rf.tip > 7 * rf.fw || Math.abs(d) > 2.2 * rf.fw) return rf;
+    var h = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(h) * d, rf.y - Math.cos(h) * d);
+    return r2 && Math.abs(r2.fw - rf.fw) < 0.35 * rf.fw ? r2 : rf;
   }
 
   async function localPreview() {
@@ -214,7 +221,7 @@
     if (hand) {
       var a = hand.lm[RING_FINGER], b = hand.lm[RING_FINGER + 1];
       var ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H;
-      ring.x = ax + 0.42 * (bx - ax); ring.y = ay + 0.42 * (by - ay);
+      ring.x = ax + 0.32 * (bx - ax); ring.y = ay + 0.32 * (by - ay);
       ring.heading = Math.atan2(bx - ax, -(by - ay)) * 180 / Math.PI;
       ppm = hand.palm / 74;   // index knuckle to little-finger knuckle is about 68 mm
       placed = true;
@@ -226,7 +233,7 @@
         ring.heading = Math.atan2((cl.tip.x - cl.base.x) * W, -((cl.tip.y - cl.base.y) * H)) * 180 / Math.PI;
         ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
         var rf = refineAt(ring.x, ring.y);  // measure the real finger in the photo
-        if (rf && rf.fw > 0.55 * cl.width * W && rf.fw < 1.8 * cl.width * W) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; }
+        if (rf && rf.fw > 0.55 * cl.width * W && rf.fw < 1.8 * cl.width * W) { rf = settle(rf); ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; }
         placed = true; hand = { viaClaude: true };
       } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
     }
