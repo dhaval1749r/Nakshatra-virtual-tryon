@@ -59,13 +59,13 @@
     ctx.drawImage(photo, 0, 0, W, H);
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
-    var mm = ppm || W * 0.0045, s = sel.widthMm * mm / sel.cw;
+    var mm = ppm || W * 0.0095, s = sel.widthMm * mm / sel.cw;
     ctx.save();
     ctx.translate(ring.x, ring.y);
     ctx.rotate(ring.heading * Math.PI / 180);
     drawBand(mm);
     ctx.scale(s, s);
-    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6 / s; ctx.shadowOffsetY = 2 / s;
+    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 3.5 * mm / s; ctx.shadowOffsetY = 1.2 * mm / s;
     ctx.drawImage(img, -sel.cw / 2, -sel.ch / 2);
     ctx.restore();
   }
@@ -73,17 +73,17 @@
   /* The silver band that goes round the finger. It sits under the stone, is darker where it turns away
      at the sides of the finger, and throws a soft shadow on the skin, so the ring looks worn. */
   function drawBand(mm) {
-    var fw = FINGER_MM * mm * 1.04, t = Math.max(3, 2.3 * mm), cx = fw / 2;
+    var fw = FINGER_MM * mm * 1.1, t = Math.max(2, 1.7 * mm), cx = fw / 2;
     var g = ctx.createLinearGradient(-cx, 0, cx, 0);
     g.addColorStop(0, 'rgba(110,114,122,0)'); g.addColorStop(0.07, 'rgba(110,114,122,.95)'); g.addColorStop(0.22, '#bfc3ca');
     g.addColorStop(0.5, '#fbfbfc'); g.addColorStop(0.78, '#bfc3ca'); g.addColorStop(0.93, 'rgba(110,114,122,.95)'); g.addColorStop(1, 'rgba(110,114,122,0)');
     ctx.save();
     ctx.lineCap = 'butt';
-    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.12, cx, 0);
-    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = t * 1.4; ctx.shadowOffsetY = t * 0.5;
-    ctx.strokeStyle = 'rgba(70,72,80,.9)'; ctx.lineWidth = t + 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0);
+    ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = t * 1.6; ctx.shadowOffsetY = t * 0.6;
+    ctx.strokeStyle = 'rgba(80,82,90,.85)'; ctx.lineWidth = t + 1; ctx.stroke();
     ctx.shadowColor = 'transparent';
-    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.12, cx, 0);
+    ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0);
     ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
     ctx.restore();
   }
@@ -137,9 +137,9 @@
     if (hand) {
       var a = hand.lm[RING_FINGER], b = hand.lm[RING_FINGER + 1];
       var ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H;
-      ring.x = ax + 0.45 * (bx - ax); ring.y = ay + 0.45 * (by - ay);
+      ring.x = ax + 0.42 * (bx - ax); ring.y = ay + 0.42 * (by - ay);
       ring.heading = Math.atan2(bx - ax, -(by - ay)) * 180 / Math.PI;
-      ppm = hand.palm / 68;   // index knuckle to little-finger knuckle is about 68 mm
+      ppm = hand.palm / 74;   // index knuckle to little-finger knuckle is about 68 mm
       placed = true;
     } else {
       var cl = null;
@@ -211,7 +211,7 @@
     generating = true; $('#generate').disabled = true; $('#save').disabled = true; openUrl = null;
     if (originalPhoto) { photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; }
     var inClaude = !!(window.claude && window.claude.use);          // the Claude preview page cannot reach the AI service
-    var useAI = !inClaude && !!(API || SPACE), done = false;
+    var useAI = !inClaude && !!(API || SPACE) && CFG.useAI === true, done = false;   // AI image model only when config.js turns it on; the default keeps your photo exactly as it is
     try {
       if (useAI) {
         setBusy(true, 'Creating your try-on with AI. This can take up to a minute. Please keep this page open.');
@@ -227,10 +227,11 @@
       if (window.console) console.warn('AI try-on failed:', err);
     }
     if (!done) {
-      setBusy(true, 'Finding your finger…');
+      setBusy(true, 'Placing the ring on your finger…');
+      var wait = new Promise(function (r) { setTimeout(r, 1500); });
       photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H;
-      var found = await localPreview();
-      setStatus((useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
+      var found = await localPreview(); await wait;
+      setStatus(!useAI && found ? 'Your ring is placed on your finger. Your photo and background are unchanged.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
         (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
     }
     setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;

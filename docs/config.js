@@ -4,5 +4,6 @@
    If neither can be reached, the page shows a quick preview made on the customer's device instead. */
 window.NAKSHATRA_TRYON = {
   space: "dhaval1749r/nakshatra-ai-tryon",
-  api: ""
+  api: "",
+  useAI: false   // false = place the real ring photo on your finger on the device (photo and background stay unchanged). true = let the AI service redraw the photo.
 };
