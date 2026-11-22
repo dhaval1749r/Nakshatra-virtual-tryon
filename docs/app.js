@@ -60,9 +60,9 @@
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
     var mm = ppm || W * 0.0095, s = sel.widthMm * mm / sel.cw;
-    cv.setAttribute('data-ring', [Math.round(ring.x), Math.round(ring.y), Math.round(ring.heading), (FINGER_MM * mm).toFixed(1)].join(','));   // x, y, rotation, finger width in pixels
     var rad = ring.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // direction along the finger, towards the tip
     var sk = skinAround(ring.x, ring.y, ux, uy, FINGER_MM * mm * 0.9);                // skin colour and light of this photo
+    cv.setAttribute('data-ring', [Math.round(ring.x), Math.round(ring.y), Math.round(ring.heading), (FINGER_MM * mm).toFixed(1)].join(','));   // x, y, rotation, finger width in pixels
     ctx.save();
     ctx.translate(ring.x, ring.y);
     ctx.rotate(rad);
@@ -77,9 +77,9 @@
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
     ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
-    ctx.shadowColor = 'rgba(15,6,3,.4)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;      // tight shadow where the setting touches the skin
+    ctx.shadowColor = 'rgba(15,6,3,.22)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;      // small tight shadow where the setting touches the skin
     ctx.drawImage(oc, -pw / 2, -ph / 2);
-    ctx.shadowColor = 'rgba(0,0,0,.26)'; ctx.shadowBlur = 2.8 * mm; ctx.shadowOffsetY = 1.1 * mm;      // soft shadow around it
+    ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
     ctx.drawImage(oc, -pw / 2, -ph / 2);
     ctx.restore();
   }
@@ -112,27 +112,23 @@
   /* The thin silver band round the finger: bright in the middle, darker where it turns away,
      and its ends take the skin colour so it seems to go behind the finger. */
   function drawBand(mm, sk) {
-    var fw = FINGER_MM * mm * 0.98, t = Math.max(2.4, 1.25 * mm), cx = fw / 2, e = fw * 0.05;
+    var fw = FINGER_MM * mm * 0.93, t = Math.max(2, 1.45 * mm), cx = fw / 2;   // as wide as the finger, so it does not stick out past it
     var L = sk.light, c = function (v) { return Math.round(Math.min(255, v * L)); };
-    var mix = function (v) { return [Math.round(Math.min(255, (v * 0.72 + sk.r * 0.28) * L)), Math.round(Math.min(255, (v * 0.72 + sk.g * 0.28) * L)), Math.round(Math.min(255, (v * 0.72 + sk.b * 0.28) * L))]; };
     var skin = sk.r + ',' + sk.g + ',' + sk.b;
-    var path = function (dy) { ctx.beginPath(); ctx.moveTo(-cx, dy + e); ctx.quadraticCurveTo(0, dy - e, cx, dy + e); };   // the band wraps round: its ends curve down and away
-    var body = ctx.createLinearGradient(-cx, 0, cx, 0);      // silver tinted by the skin, darker where the band turns round the finger
-    body.addColorStop(0, 'rgba(' + skin + ',0)'); body.addColorStop(0.1, 'rgba(' + mix(95) + ',.8)'); body.addColorStop(0.24, 'rgb(' + mix(150) + ')'); body.addColorStop(0.4, 'rgb(' + mix(205) + ')');
-    body.addColorStop(0.5, 'rgb(' + mix(232) + ')'); body.addColorStop(0.6, 'rgb(' + mix(205) + ')'); body.addColorStop(0.76, 'rgb(' + mix(150) + ')'); body.addColorStop(0.9, 'rgba(' + mix(95) + ',.8)'); body.addColorStop(1, 'rgba(' + skin + ',0)');
-    var shine = ctx.createLinearGradient(-cx, 0, cx, 0);     // thin bright reflection along the top of the band
-    shine.addColorStop(0.08, 'rgba(255,255,255,0)'); shine.addColorStop(0.28, 'rgba(255,255,255,.5)'); shine.addColorStop(0.5, 'rgba(255,255,255,.95)'); shine.addColorStop(0.72, 'rgba(255,255,255,.5)'); shine.addColorStop(0.92, 'rgba(255,255,255,0)');
+    var g = ctx.createLinearGradient(-cx, 0, cx, 0);
+    g.addColorStop(0, 'rgba(' + skin + ',0)'); g.addColorStop(0.1, 'rgba(' + [c(105), c(108), c(114)] + ',.75)'); g.addColorStop(0.24, 'rgb(' + [c(185), c(189), c(196)] + ')');
+    g.addColorStop(0.5, 'rgb(' + [c(245), c(246), c(248)] + ')'); g.addColorStop(0.76, 'rgb(' + [c(185), c(189), c(196)] + ')');
+    g.addColorStop(0.9, 'rgba(' + [c(105), c(108), c(114)] + ',.75)'); g.addColorStop(1, 'rgba(' + skin + ',0)');
     ctx.save();
     ctx.lineCap = 'butt';
-    path(-t * 1.0); ctx.strokeStyle = 'rgba(60,28,16,.14)'; ctx.lineWidth = Math.max(1, 0.5 * mm); ctx.stroke();        // skin pressed in just above and below the band
-    path(t * 1.0); ctx.strokeStyle = 'rgba(60,28,16,.18)'; ctx.lineWidth = Math.max(1, 0.5 * mm); ctx.stroke();
-    path(0); ctx.shadowColor = 'rgba(30,12,6,.45)'; ctx.shadowBlur = t * 1.8; ctx.shadowOffsetY = t * 0.9;              // shadow on the skin below
-    ctx.strokeStyle = 'rgba(' + [c(105), c(106), c(112)] + ',.62)'; ctx.lineWidth = t + 0.8; ctx.stroke();                   // dark edge of the metal
+    var path = function () { ctx.beginPath(); ctx.moveTo(-cx, 0); ctx.quadraticCurveTo(0, fw * 0.07, cx, 0); };
+    path(); ctx.shadowColor = 'rgba(30,12,6,.38)'; ctx.shadowBlur = t * 1.8; ctx.shadowOffsetY = t * 0.7;
+    ctx.strokeStyle = 'rgba(' + [c(75), c(77), c(84)] + ',.8)'; ctx.lineWidth = t + 0.8; ctx.stroke();
     ctx.shadowColor = 'transparent';
-    path(0); ctx.strokeStyle = body; ctx.lineWidth = t * 0.86; ctx.stroke();
-    path(-t * 0.2); ctx.strokeStyle = shine; ctx.lineWidth = Math.max(1, t * 0.3); ctx.stroke();
+    path(); ctx.strokeStyle = g; ctx.lineWidth = t; ctx.stroke();
     ctx.restore();
   }
+
 
   /* ---- quick preview on the device: MediaPipe Hands finds the finger (files bundled in vendor/hands) ---- */
   var handsLib = null, resolveRun = null;
