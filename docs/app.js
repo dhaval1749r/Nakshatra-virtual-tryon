@@ -116,6 +116,21 @@
     hs.forEach(function (lm) { var w = Math.hypot((lm[5].x - lm[17].x) * W, (lm[5].y - lm[17].y) * H); if (w > bestW) { bestW = w; best = lm; } });
     return { lm: best, palm: bestW };
   }
+  /* Inside the Claude preview page the hand files cannot be loaded, so Claude finds the finger from the photo instead. */
+  var FIND_PROMPT = 'This photo shows a hand. Find the ring finger (the finger next to the little finger) of the hand that is closest to the camera, so a ring can be placed on it. Reply with only one JSON object: ' +
+    '{"found":true,"base":{"x":0.0,"y":0.0},"tip":{"x":0.0,"y":0.0},"width":0.0}. ' +
+    'base is the centre of the finger\'s lower segment, between the knuckle where it joins the hand and the first joint, which is where a ring sits. tip is the very end of that finger. ' +
+    'width is the thickness of the finger at base as a fraction of the image width. All x and y values are fractions from 0 to 1 of the image width and height from the top-left corner. ' +
+    'If the ring finger is not clearly visible reply {"found":false}.';
+  function isNum(v) { return typeof v === 'number' && isFinite(v); }
+  async function claudeFinger() {
+    var c = window.claude; if (!c || !c.use || !photoBlob) return null;
+    var ai = await c.use('sample'); if (!ai) return null;
+    var lim = await ai.limits(); if (!lim || !lim.images) return null;
+    var r = await ai.json(FIND_PROMPT, { images: photoBlob });
+    if (!r || r.found === false || !r.base || !r.tip || !isNum(r.base.x) || !isNum(r.base.y) || !isNum(r.tip.x) || !isNum(r.tip.y) || !isNum(r.width) || r.width < 0.01 || r.width > 0.6) return null;
+    return r;
+  }
   async function localPreview() {
     placed = false; manual = false; hand = null;
     try { hand = await detect(); } catch (err) { hand = null; }
@@ -127,7 +142,14 @@
       ppm = hand.palm / 68;   // index knuckle to little-finger knuckle is about 68 mm
       placed = true;
     } else {
-      ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true;
+      var cl = null;
+      try { cl = await claudeFinger(); } catch (err) { cl = null; }
+      if (cl) {
+        ring.x = cl.base.x * W; ring.y = cl.base.y * H;
+        ring.heading = Math.atan2((cl.tip.x - cl.base.x) * W, -((cl.tip.y - cl.base.y) * H)) * 180 / Math.PI;
+        ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
+        placed = true; hand = { viaClaude: true };
+      } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
     }
     draw();
     return !!hand;
@@ -188,7 +210,8 @@
     if (!photo || generating) return;
     generating = true; $('#generate').disabled = true; $('#save').disabled = true; openUrl = null;
     if (originalPhoto) { photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; }
-    var useAI = !!(API || SPACE), done = false;
+    var inClaude = !!(window.claude && window.claude.use);          // the Claude preview page cannot reach the AI service
+    var useAI = !inClaude && !!(API || SPACE), done = false;
     try {
       if (useAI) {
         setBusy(true, 'Creating your try-on with AI. This can take up to a minute. Please keep this page open.');
@@ -204,10 +227,10 @@
       if (window.console) console.warn('AI try-on failed:', err);
     }
     if (!done) {
-      setBusy(true, 'Preparing a quick preview…');
+      setBusy(true, 'Finding your finger…');
       photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H;
       var found = await localPreview();
-      setStatus((useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : 'This is a quick preview made on your device. ') +
+      setStatus((useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
         (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
     }
     setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;

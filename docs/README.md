@@ -34,3 +34,7 @@ Flow: add a hand photo, choose a ring, press **Generate try-on**. The page sends
 If the AI cannot be reached or the free GPU quota is used up, the page shows a quick preview made on the customer's device
 instead (hand found with MediaPipe, ring drawn on the finger) and says so.
 A clearer, larger photo of each ring on a plain white background in `images/` will give better AI results.
+
+## Put it online with GitHub Pages
+In the repository: Settings, Pages, Source "Deploy from a branch", branch `simple-site`, folder `/docs`, Save.
+The site opens at `https://<your-user>.github.io/<repository>/`. The AI try-on and the hand finder both work there.
