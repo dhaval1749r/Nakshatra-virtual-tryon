@@ -60,6 +60,7 @@
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
     var mm = ppm || W * 0.0095, s = sel.widthMm * mm / sel.cw;
+    cv.setAttribute('data-ring', [Math.round(ring.x), Math.round(ring.y), Math.round(ring.heading), (FINGER_MM * mm).toFixed(1)].join(','));   // x, y, rotation, finger width in pixels
     var rad = ring.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // direction along the finger, towards the tip
     var sk = skinAround(ring.x, ring.y, ux, uy, FINGER_MM * mm * 0.9);                // skin colour and light of this photo
     ctx.save();
@@ -186,7 +187,7 @@
      shortest way across it as the finger width, and the way along it as the finger direction. */
   var pix = null, pixFor = null;
   function pixels() { if (pixFor !== photo) { pix = photo.getContext('2d').getImageData(0, 0, W, H).data; pixFor = photo; } return pix; }
-  function refineAt(x0, y0) {
+  function refineAt(x0, y0, hint) {
     var d; try { d = pixels(); } catch (e) { return null; }
     var X = Math.max(4, Math.min(W - 5, Math.round(x0))), Y = Math.max(4, Math.min(H - 5, Math.round(y0)));
     var m = [0, 0, 0], q = [0, 0, 0], n = 0, i, k;
@@ -202,7 +203,7 @@
     var cx = X, cy = Y, best = null;
     for (var it = 0; it < 3; it++) {
       best = null;
-      for (var a = 0; a < 180; a += 6) {
+      for (var a = 0; a < 180; a += 3) {
         var r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r), c = run(cx, cy, dx, dy) + run(cx, cy, -dx, -dy);
         if (!best || c < best.c) best = { c: c, dx: dx, dy: dy, a: run(cx, cy, dx, dy), b: run(cx, cy, -dx, -dy) };
       }
@@ -211,14 +212,26 @@
     if (!best || best.c < W * 0.02 || best.c > Math.min(W, H) * 0.3) return null;
     var ax = -best.dy, ay = best.dx;                                       // along the finger
     var up = run(cx, cy, ax, ay), down = run(cx, cy, -ax, -ay);
-    if (down < up) { ax = -ax; ay = -ay; }                                 // tip is the side where the finger ends sooner
-    return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c, tip: Math.min(up, down) };
+    if (hint) {                                                             // known direction of the fingertip
+      if (ax * hint.dx + ay * hint.dy < 0) { ax = -ax; ay = -ay; }
+      if (ax * hint.dx + ay * hint.dy < 0.9) { ax = hint.dx; ay = hint.dy; }  // measured direction is more than about 25 degrees off: trust the hint
+    }
+    else if (down < up) { ax = -ax; ay = -ay; }                            // otherwise the tip is where the finger ends sooner
+    // walk from the ring towards the hand: the knuckle web is where the finger suddenly gets much wider
+    var px = -ay, py = ax, web = -1, wide = 0, s;
+    for (s = 0.25 * best.c; s < 5 * best.c; s += 0.25 * best.c) {
+      var qx = cx - ax * s, qy = cy - ay * s;
+      if (run(qx, qy, px, py) + run(qx, qy, -px, -py) > 1.6 * best.c) { if (++wide >= 2) { web = s - 0.25 * best.c; break; } } else wide = 0;
+    }
+    return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c, tip: run(cx, cy, ax, ay), web: web };
   }
-  /* A ring sits on the lower part of the finger, about 2.7 finger-widths from the tip. Slide the point there and measure again. */
+  /* A ring sits low on the finger, a little above the knuckle web. Slide the point there and measure again. */
   function settle(rf) {
-    var d = rf.tip - 2.7 * rf.fw;
-    if (rf.tip > 7 * rf.fw || Math.abs(d) > 2.2 * rf.fw) return rf;
-    var h = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(h) * d, rf.y - Math.cos(h) * d);
+    var d;                                                       // distance to move towards the fingertip
+    if (rf.web > 0) d = -(rf.web - 0.9 * rf.fw) ; else d = rf.tip - 2.7 * rf.fw;
+    if (rf.web <= 0 && (rf.tip > 7 * rf.fw || rf.tip < 1.5 * rf.fw)) return rf;      // tip distance not trustworthy: leave the ring where it is
+    if (Math.abs(d) > 3 * rf.fw) return rf;
+    var h = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(h) * d, rf.y - Math.cos(h) * d, { dx: Math.sin(h), dy: -Math.cos(h) });
     return r2 && Math.abs(r2.fw - rf.fw) < 0.35 * rf.fw ? r2 : rf;
   }
 
@@ -239,7 +252,8 @@
         ring.x = cl.base.x * W; ring.y = cl.base.y * H;
         ring.heading = Math.atan2((cl.tip.x - cl.base.x) * W, -((cl.tip.y - cl.base.y) * H)) * 180 / Math.PI;
         ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
-        var rf = refineAt(ring.x, ring.y);  // measure the real finger in the photo
+        var tdx = (cl.tip.x - cl.base.x) * W, tdy = (cl.tip.y - cl.base.y) * H, tl = Math.hypot(tdx, tdy) || 1;
+        var rf = refineAt(ring.x, ring.y, { dx: tdx / tl, dy: tdy / tl });  // measure the real finger in the photo
         if (rf && rf.fw > 0.55 * cl.width * W && rf.fw < 1.8 * cl.width * W) { rf = settle(rf); ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; }
         placed = true; hand = { viaClaude: true };
       } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
@@ -354,7 +368,7 @@
   cv.style.touchAction = 'pan-y';
   cv.addEventListener('click', function (e) {                         // tap the finger: the ring moves there and fits to that finger
     if (!photo || !placed || generating) return;
-    var p = pt(e), rf = refineAt(p.x, p.y);
+    var hr = ring.heading * Math.PI / 180, p = pt(e), rf = refineAt(p.x, p.y, { dx: Math.sin(hr), dy: -Math.cos(hr) });
     if (rf) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; manual = false; setStatus('Ring moved to the finger you tapped.'); }
     else { ring.x = p.x; ring.y = p.y; manual = true; setStatus('Could not measure that finger, so the ring is placed where you tapped. Tap the middle of the finger.'); }
     draw();
