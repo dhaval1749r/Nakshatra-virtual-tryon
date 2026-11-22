@@ -26,3 +26,11 @@ No build step and no framework. Open `index.html` through any web server.
 - Names and descriptions are placeholders. Rename them in `products.js`.
 - The chat answers four fixed questions. When the page runs inside Claude, it also accepts free questions.
 - Hosting: any static host works, including GitHub Pages.
+
+## AI try-on
+
+Flow: add a hand photo, choose a ring, press **Generate try-on**. The page sends the photo and the ring picture to the AI
+(`config.js`: the Hugging Face Space `dhaval1749r/nakshatra-ai-tryon`, or your FastAPI backend in `api`) and shows the result.
+If the AI cannot be reached or the free GPU quota is used up, the page shows a quick preview made on the customer's device
+instead (hand found with MediaPipe, ring drawn on the finger) and says so.
+A clearer, larger photo of each ring on a plain white background in `images/` will give better AI results.

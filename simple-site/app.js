@@ -20,15 +20,19 @@
   });
 
   /* ---------- try-on ---------- */
+  var CFG = window.NAKSHATRA_TRYON || {};
+  var SPACE = CFG.space || '', API = String(CFG.api || '').trim().replace(/\/+$/, '');
+  var GRADIO = 'https://cdn.jsdelivr.net/npm/@gradio/client@1.19.1/+esm';
   var cv = $('#cv'), ctx = cv.getContext('2d'), statusEl = $('#status');
-  var sel = P[0], finger = 'ring', photo = null, W = 800, H = 600, hand = null, ppm = 0;
-  var ring = { x: 0, y: 0, heading: 0 }, sizeMult = 1, rotOff = 0, placed = false;
+  var sel = P[0], photo = null, photoBlob = null, W = 800, H = 600;
+  var hand = null, ppm = 0, ring = { x: 0, y: 0, heading: 0 }, placed = false, manual = false;
+  var generating = false, openUrl = null;
   var cuts = {};
-  var FMM = { index: 17, middle: 18, ring: 16, pinky: 14 };   // typical finger widths, mm
   P.forEach(function (p) { var i = new Image(); i.onload = draw; i.src = p.cut; cuts[p.id] = i; });
-  var MCP = { index: 5, middle: 9, ring: 13, pinky: 17 };
+  var RING_FINGER = 13, FINGER_MM = 16;   // MediaPipe landmark of the ring finger knuckle; typical ring finger width in mm
 
   function setStatus(t, err) { statusEl.textContent = t; statusEl.classList.toggle('err', !!err); }
+  function setBusy(on, text) { $('#busy').hidden = !on; if (text) $('#busyTxt').textContent = text; }
 
   $('#picks').innerHTML = P.map(function (p) {
     return '<button class="pick" type="button" data-id="' + p.id + '" aria-pressed="false"><img src="' + esc(p.cut) + '" alt="">' + esc(p.name) + '</button>';
@@ -36,18 +40,13 @@
   function choose(id) {
     sel = byId[id];
     document.querySelectorAll('.pick').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.id === id)); });
-    if (photo) setStatus(sel.name + ' selected.'); else setStatus(sel.name + ' selected. Now add a photo of your hand.');
-    draw();
+    if (photo) {                       // a new ring: show the photo again until the customer presses Generate
+      placed = false; manual = false; openUrl = null; $('#generate').textContent = 'Generate try-on'; draw();
+      setStatus(sel.name + ' selected. Press Generate try-on.');
+    }
   }
   $('#picks').addEventListener('click', function (e) { var b = e.target.closest('.pick'); if (b) choose(b.dataset.id); });
   choose(P[0].id);
-
-  $('#fingers').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-f]'); if (!b) return;
-    finger = b.dataset.f;
-    document.querySelectorAll('#fingers button').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-    if (hand) { placeOnFinger(); draw(); }
-  });
 
   function draw() {
     ctx.clearRect(0, 0, cv.width, cv.height);
@@ -60,10 +59,10 @@
     ctx.drawImage(photo, 0, 0, W, H);
     var img = cuts[sel.id];
     if (!placed || !img || !img.complete) return;
-    var mm = ppm || W * 0.0045, wpx = sel.widthMm * mm * sizeMult, s = wpx / sel.cw;
+    var mm = ppm || W * 0.0045, s = sel.widthMm * mm / sel.cw;
     ctx.save();
     ctx.translate(ring.x, ring.y);
-    ctx.rotate((ring.heading + rotOff) * Math.PI / 180);
+    ctx.rotate(ring.heading * Math.PI / 180);
     drawBand(mm);
     ctx.scale(s, s);
     ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6 / s; ctx.shadowOffsetY = 2 / s;
@@ -74,7 +73,7 @@
   /* The silver band that goes round the finger. It sits under the stone, is darker where it turns away
      at the sides of the finger, and throws a soft shadow on the skin, so the ring looks worn. */
   function drawBand(mm) {
-    var fw = FMM[finger] * mm * 1.04, t = Math.max(3, 2.3 * mm), cx = fw / 2;
+    var fw = FINGER_MM * mm * 1.04, t = Math.max(3, 2.3 * mm), cx = fw / 2;
     var g = ctx.createLinearGradient(-cx, 0, cx, 0);
     g.addColorStop(0, 'rgba(110,114,122,0)'); g.addColorStop(0.07, 'rgba(110,114,122,.95)'); g.addColorStop(0.22, '#bfc3ca');
     g.addColorStop(0.5, '#fbfbfc'); g.addColorStop(0.78, '#bfc3ca'); g.addColorStop(0.93, 'rgba(110,114,122,.95)'); g.addColorStop(1, 'rgba(110,114,122,0)');
@@ -89,7 +88,7 @@
     ctx.restore();
   }
 
-  /* hand detection: MediaPipe Hands, files are bundled in vendor/hands */
+  /* ---- quick preview on the device: MediaPipe Hands finds the finger (files bundled in vendor/hands) ---- */
   var handsLib = null, resolveRun = null;
   function loadScript(src) {
     return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('load ' + src)); }; document.head.appendChild(s); });
@@ -117,14 +116,103 @@
     hs.forEach(function (lm) { var w = Math.hypot((lm[5].x - lm[17].x) * W, (lm[5].y - lm[17].y) * H); if (w > bestW) { bestW = w; best = lm; } });
     return { lm: best, palm: bestW };
   }
-  function placeOnFinger() {
-    var lm = hand.lm, i = MCP[finger], a = lm[i], b = lm[i + 1];
-    var ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H;
-    ring.x = ax + 0.45 * (bx - ax); ring.y = ay + 0.45 * (by - ay);
-    ring.heading = Math.atan2(bx - ax, -(by - ay)) * 180 / Math.PI;
-    ppm = hand.palm / 68;   // index knuckle to little-finger knuckle is about 68 mm
-    placed = true;
+  async function localPreview() {
+    placed = false; manual = false; hand = null;
+    try { hand = await detect(); } catch (err) { hand = null; }
+    if (hand) {
+      var a = hand.lm[RING_FINGER], b = hand.lm[RING_FINGER + 1];
+      var ax = a.x * W, ay = a.y * H, bx = b.x * W, by = b.y * H;
+      ring.x = ax + 0.45 * (bx - ax); ring.y = ay + 0.45 * (by - ay);
+      ring.heading = Math.atan2(bx - ax, -(by - ay)) * 180 / Math.PI;
+      ppm = hand.palm / 68;   // index knuckle to little-finger knuckle is about 68 mm
+      placed = true;
+    } else {
+      ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true;
+    }
+    draw();
+    return !!hand;
   }
+
+  /* ---- AI try-on: the Hugging Face Space (Gradio) or the FastAPI backend ---- */
+  function toBlob(c, type, q) { return new Promise(function (r) { c.toBlob(r, type, q); }); }
+  // the selected ring on a plain white square, big enough for the AI model to see its detail
+  async function jewelleryBlob() {
+    var img = cuts[sel.id], c = document.createElement('canvas'); c.width = c.height = 1024;
+    var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1024, 1024);
+    var k = Math.min(820 / img.naturalWidth, 820 / img.naturalHeight);
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(img, (1024 - img.naturalWidth * k) / 2, (1024 - img.naturalHeight * k) / 2, img.naturalWidth * k, img.naturalHeight * k);
+    return toBlob(c, 'image/jpeg', 0.93);
+  }
+  async function fetchResult(url) {
+    try { var r = await fetch(url); if (!r.ok) throw new Error('http ' + r.status); return { blob: await r.blob() }; }
+    catch (err) { return { url: url }; }       // the image host may not allow reading; we can still show it
+  }
+  async function aiGenerate() {
+    var jb = await jewelleryBlob();
+    var customer = new File([photoBlob], 'customer-photo.jpg', { type: 'image/jpeg' });
+    var jewel = new File([jb], sel.id + '.jpg', { type: 'image/jpeg' });
+    if (API) {
+      var form = new FormData(); form.append('customer_photo', customer); form.append('jewellery_photo', jewel); form.append('category', 'ring');
+      var r = await fetch(API + '/api/felo/try-on', { method: 'POST', body: form });
+      if (!r.ok) { var m = 'AI service error'; try { m = (await r.json()).detail || m; } catch (e) {} throw new Error(m); }
+      return { blob: await r.blob() };
+    }
+    if (!SPACE) throw new Error('AI try-on is not connected');
+    var mod = await import(GRADIO);
+    var client = await mod.Client.connect(SPACE);
+    var res = await client.predict('/try_on', [customer, jewel, 'ring']);
+    var out = res && res.data && res.data[0], url = typeof out === 'string' ? out : (out && (out.url || out.path));
+    if (!url) throw new Error('AI service returned no image');
+    return fetchResult(url);
+  }
+  function showImage(src) {
+    return new Promise(function (res, rej) {
+      var im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = function () {
+        var src_ = this;
+        var sc = Math.min(1, 1100 / Math.max(src_.naturalWidth, src_.naturalHeight));
+        W = Math.round(src_.naturalWidth * sc); H = Math.round(src_.naturalHeight * sc);
+        var c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(src_, 0, 0, W, H);
+        photo = c; placed = false; cv.width = W; cv.height = H; draw(); res();
+      };
+      im.onerror = function () {
+        if (im.crossOrigin) { var retry = new Image(); retry.onload = function () { im.onload.call(retry); }; retry.onerror = function () { rej(new Error('image')); }; retry.src = src; }   // host without CORS: still show it
+        else rej(new Error('image'));
+      };
+      im.src = src;
+    });
+  }
+  var originalPhoto = null;
+  async function generate() {
+    if (!photo || generating) return;
+    generating = true; $('#generate').disabled = true; $('#save').disabled = true; openUrl = null;
+    if (originalPhoto) { photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; }
+    var useAI = !!(API || SPACE), done = false;
+    try {
+      if (useAI) {
+        setBusy(true, 'Creating your try-on with AI. This can take up to a minute. Please keep this page open.');
+        setStatus('Generating…');
+        var timeout = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 270000); });
+        var out = await Promise.race([aiGenerate(), timeout]);
+        if (out.blob) { var u = URL.createObjectURL(out.blob); await showImage(u); }
+        else { openUrl = out.url; await showImage(out.url).catch(function () { photo = originalPhoto; }); }
+        setStatus('Your AI try-on is ready. Please check the ring details against the real ring.');
+        done = true;
+      }
+    } catch (err) {
+      if (window.console) console.warn('AI try-on failed:', err);
+    }
+    if (!done) {
+      setBusy(true, 'Preparing a quick preview…');
+      photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H;
+      var found = await localPreview();
+      setStatus((useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : 'This is a quick preview made on your device. ') +
+        (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
+    }
+    setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;
+  }
+  $('#generate').onclick = generate;
 
   $('#file').onchange = async function (e) {
     var f = e.target.files && e.target.files[0]; if (!f) return;
@@ -133,31 +221,29 @@
       var sc = Math.min(1, 1100 / Math.max(bmp.naturalWidth, bmp.naturalHeight));
       W = Math.round(bmp.naturalWidth * sc); H = Math.round(bmp.naturalHeight * sc);
       var off = document.createElement('canvas'); off.width = W; off.height = H; off.getContext('2d').drawImage(bmp, 0, 0, W, H);
-      photo = off; cv.width = W; cv.height = H;
+      photo = originalPhoto = off; cv.width = W; cv.height = H;
+      photoBlob = await toBlob(off, 'image/jpeg', 0.9);
     } catch (err) { setStatus('That file could not be opened as a picture. Please use a JPG or PNG photo.', true); return; }
     e.target.value = '';
-    hand = null; placed = false; ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0;
-    $('#save').disabled = false; draw();
-    setStatus('Finding your hand…');
-    try {
-      hand = await detect();
-      if (hand) { placeOnFinger(); setStatus('Ring placed on your ' + (finger === 'pinky' ? 'little' : finger) + ' finger. Drag it if you want to move it.'); }
-      else { placed = true; setStatus('No hand found in this photo. Tap on the photo where the ring should go.', true); }
-    } catch (err) {
-      placed = true; setStatus('Hand detection did not start here. Tap on the photo where the ring should go.', true);
-    }
+    placed = false; manual = false; hand = null; ppm = 0; openUrl = null;
+    $('#stepRing').hidden = false; $('#stepGo').hidden = false; $('#save').disabled = true; $('#generate').textContent = 'Generate try-on';
     draw();
+    setStatus('Now choose a ring, then press Generate try-on.');
+    $('#stepRing').scrollIntoView({ block: 'nearest' });
   };
 
+  /* tap to place the ring: only when no hand could be found */
   var dragging = false;
   function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; }
-  cv.addEventListener('pointerdown', function (e) { if (!photo) return; dragging = true; cv.setPointerCapture(e.pointerId); var p = pt(e); ring.x = p.x; ring.y = p.y; placed = true; draw(); });
+  cv.addEventListener('pointerdown', function (e) { if (!photo || !manual) return; dragging = true; cv.setPointerCapture(e.pointerId); var p = pt(e); ring.x = p.x; ring.y = p.y; draw(); });
   cv.addEventListener('pointermove', function (e) { if (!dragging) return; var p = pt(e); ring.x = p.x; ring.y = p.y; draw(); });
   cv.addEventListener('pointerup', function () { dragging = false; });
   cv.addEventListener('pointercancel', function () { dragging = false; });
 
   $('#save').onclick = async function () {
-    var blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); });
+    if (openUrl) { window.open(openUrl, '_blank'); return; }
+    var blob = await toBlob(cv, 'image/png');
+    if (!blob) { setStatus('Could not create the image.', true); return; }
     try {
       var d = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
       if (d) { await d.save({ filename: 'nakshatra-try-on.png', data: blob }); return; }
@@ -169,7 +255,7 @@
   /* ---------- chat ---------- */
   var FAQ = [
     ['What are the rings made of?', 'These three rings are silver with coloured stones and a halo of small white stones.'],
-    ['How does the try-on work?', 'Choose a ring, add a clear photo of the back of your hand and the ring is placed on your finger. The size comes from your hand.'],
+    ['How does the try-on work?', 'Add a clear photo of the back of your hand, choose a ring and press Generate try-on. After a short wait, AI shows the ring on your finger.'],
     ['What is the price?', 'The price depends on the ring and on the day. Please contact the shop and we will confirm the price for the ring you like.'],
     ['How do I buy?', 'Tell the shop which ring you like. This website does not take payments.']
   ];
