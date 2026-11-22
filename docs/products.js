@@ -20,7 +20,7 @@ window.PRODUCTS = [
     stone: "Blue pear-cut stone with white stone halo",
     desc: "A pear-cut blue stone surrounded by a halo of small white stones, on a stone-set band.",
     photo: "images/ring-2.jpg",
-    cut: "images/ring-2-cut.png", cw: 213, ch: 272, widthMm: 11
+    cut: "images/ring-2-cut.png", cw: 213, ch: 272, widthMm: 11, rot: 9
   },
   {
     id: "ring-3",

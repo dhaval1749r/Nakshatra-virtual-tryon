@@ -68,6 +68,7 @@
     ctx.rotate(rad);
     contactShadow(mm, s, sel);
     drawBand(mm, sk);
+    ctx.rotate((sel.rot || 0) * Math.PI / 180);          // some ring photos are slightly tilted: straighten the stone along the finger
     // the ring photo, matched to the light and skin colour of the customer's photo
     var pw = Math.max(2, Math.round(sel.cw * s)), ph = Math.max(2, Math.round(sel.ch * s));
     var oc = document.createElement('canvas'); oc.width = pw; oc.height = ph;
@@ -111,16 +112,16 @@
   /* The thin silver band round the finger: bright in the middle, darker where it turns away,
      and its ends take the skin colour so it seems to go behind the finger. */
   function drawBand(mm, sk) {
-    var fw = FINGER_MM * mm * 1.12, t = Math.max(2.4, 1.25 * mm), cx = fw / 2;
+    var fw = FINGER_MM * mm * 0.98, t = Math.max(2.4, 1.25 * mm), cx = fw / 2, e = fw * 0.05;
     var L = sk.light, c = function (v) { return Math.round(Math.min(255, v * L)); };
     var mix = function (v) { return [Math.round(Math.min(255, (v * 0.72 + sk.r * 0.28) * L)), Math.round(Math.min(255, (v * 0.72 + sk.g * 0.28) * L)), Math.round(Math.min(255, (v * 0.72 + sk.b * 0.28) * L))]; };
     var skin = sk.r + ',' + sk.g + ',' + sk.b;
-    var path = function (dy) { ctx.beginPath(); ctx.moveTo(-cx, dy - fw * 0.01); ctx.quadraticCurveTo(0, dy + fw * 0.075, cx, dy - fw * 0.01); };
+    var path = function (dy) { ctx.beginPath(); ctx.moveTo(-cx, dy + e); ctx.quadraticCurveTo(0, dy - e, cx, dy + e); };   // the band wraps round: its ends curve down and away
     var body = ctx.createLinearGradient(-cx, 0, cx, 0);      // silver tinted by the skin, darker where the band turns round the finger
-    body.addColorStop(0, 'rgba(' + skin + ',0)'); body.addColorStop(0.08, 'rgba(' + mix(120) + ',.9)'); body.addColorStop(0.26, 'rgb(' + mix(195) + ')');
-    body.addColorStop(0.5, 'rgb(' + mix(232) + ')'); body.addColorStop(0.74, 'rgb(' + mix(195) + ')'); body.addColorStop(0.92, 'rgba(' + mix(120) + ',.9)'); body.addColorStop(1, 'rgba(' + skin + ',0)');
+    body.addColorStop(0, 'rgba(' + skin + ',0)'); body.addColorStop(0.1, 'rgba(' + mix(95) + ',.8)'); body.addColorStop(0.24, 'rgb(' + mix(150) + ')'); body.addColorStop(0.4, 'rgb(' + mix(205) + ')');
+    body.addColorStop(0.5, 'rgb(' + mix(232) + ')'); body.addColorStop(0.6, 'rgb(' + mix(205) + ')'); body.addColorStop(0.76, 'rgb(' + mix(150) + ')'); body.addColorStop(0.9, 'rgba(' + mix(95) + ',.8)'); body.addColorStop(1, 'rgba(' + skin + ',0)');
     var shine = ctx.createLinearGradient(-cx, 0, cx, 0);     // thin bright reflection along the top of the band
-    shine.addColorStop(0, 'rgba(255,255,255,0)'); shine.addColorStop(0.2, 'rgba(255,255,255,.55)'); shine.addColorStop(0.5, 'rgba(255,255,255,.95)'); shine.addColorStop(0.8, 'rgba(255,255,255,.55)'); shine.addColorStop(1, 'rgba(255,255,255,0)');
+    shine.addColorStop(0.08, 'rgba(255,255,255,0)'); shine.addColorStop(0.28, 'rgba(255,255,255,.5)'); shine.addColorStop(0.5, 'rgba(255,255,255,.95)'); shine.addColorStop(0.72, 'rgba(255,255,255,.5)'); shine.addColorStop(0.92, 'rgba(255,255,255,0)');
     ctx.save();
     ctx.lineCap = 'butt';
     path(-t * 1.0); ctx.strokeStyle = 'rgba(60,28,16,.14)'; ctx.lineWidth = Math.max(1, 0.5 * mm); ctx.stroke();        // skin pressed in just above and below the band
@@ -228,7 +229,7 @@
   /* A ring sits low on the finger, a little above the knuckle web. Slide the point there and measure again. */
   function settle(rf) {
     var d;                                                       // distance to move towards the fingertip
-    if (rf.web > 0) d = -(rf.web - 0.9 * rf.fw) ; else d = rf.tip - 2.7 * rf.fw;
+    if (rf.web > 0) d = -(rf.web - 0.65 * rf.fw) ; else d = rf.tip - 2.7 * rf.fw;
     if (rf.web <= 0 && (rf.tip > 7 * rf.fw || rf.tip < 1.5 * rf.fw)) return rf;      // tip distance not trustworthy: leave the ring where it is
     if (Math.abs(d) > 3 * rf.fw) return rf;
     var h = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(h) * d, rf.y - Math.cos(h) * d, { dx: Math.sin(h), dy: -Math.cos(h) });
