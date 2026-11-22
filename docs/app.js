@@ -74,10 +74,28 @@
     ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.min(0.7, 0.04 * mm + 0.15).toFixed(2) + 'px)';
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
-    ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
-    ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
+    ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.17)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
+    var vg = ox.createLinearGradient(0, 0, 0, ph);                       // the ring curves: top catches light, lower edge falls into shade
+    vg.addColorStop(0, 'rgba(255,255,255,.07)'); vg.addColorStop(0.55, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(20,8,4,.22)');
+    ox.fillStyle = vg; ox.fillRect(0, 0, pw, ph);
+    var hg = ox.createLinearGradient(0, 0, pw, 0);                        // the sides turn away from the camera
+    hg.addColorStop(0, 'rgba(20,8,4,.14)'); hg.addColorStop(0.25, 'rgba(0,0,0,0)'); hg.addColorStop(0.75, 'rgba(0,0,0,0)'); hg.addColorStop(1, 'rgba(20,8,4,.14)');
+    ox.fillStyle = hg; ox.fillRect(0, 0, pw, ph);
+    ox.fillStyle = ox.createPattern(grainTile(), 'repeat'); ox.fillRect(0, 0, pw, ph);   // same fine grain as a phone photo
+    ctx.shadowColor = 'rgba(15,6,3,.55)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;   // tight shadow where the ring touches the skin
+    ctx.drawImage(oc, -pw / 2, -ph / 2);
+    ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = 3 * mm; ctx.shadowOffsetY = 1.2 * mm;      // soft shadow around it
     ctx.drawImage(oc, -pw / 2, -ph / 2);
     ctx.restore();
+  }
+
+  var grain = null;
+  function grainTile() {
+    if (grain) return grain;
+    grain = document.createElement('canvas'); grain.width = grain.height = 96;
+    var g = grain.getContext('2d'), d = g.createImageData(96, 96);
+    for (var i = 0; i < d.data.length; i += 4) { var v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 20; }
+    g.putImageData(d, 0, 0); return grain;
   }
 
   /* average skin colour on the finger just above and below the ring, and how bright the photo is there */
