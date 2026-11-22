@@ -71,7 +71,7 @@
     var pw = Math.max(2, Math.round(sel.cw * s)), ph = Math.max(2, Math.round(sel.ch * s));
     var oc = document.createElement('canvas'); oc.width = pw; oc.height = ph;
     var ox = oc.getContext('2d'); ox.imageSmoothingQuality = 'high';
-    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.min(0.7, 0.04 * mm + 0.15).toFixed(2) + 'px)';
+    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.min(0.35, 0.02 * mm + 0.1).toFixed(2) + 'px)';
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
     ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
@@ -175,6 +175,39 @@
     var ws = fs.map(function (x) { return x.width; }).sort(function (p, q) { return p - q; }), med = ws[Math.floor(ws.length / 2)];
     return { base: f.base, tip: f.tip, width: Math.max(0.75 * med, Math.min(1.25 * med, f.width)) };   // a finger is about as thick as its neighbours
   }
+  /* Measure the finger under a point from the photo itself: find the skin around the point, take the
+     shortest way across it as the finger width, and the way along it as the finger direction. */
+  var pix = null, pixFor = null;
+  function pixels() { if (pixFor !== photo) { pix = photo.getContext('2d').getImageData(0, 0, W, H).data; pixFor = photo; } return pix; }
+  function refineAt(x0, y0) {
+    var d; try { d = pixels(); } catch (e) { return null; }
+    var X = Math.max(4, Math.min(W - 5, Math.round(x0))), Y = Math.max(4, Math.min(H - 5, Math.round(y0)));
+    var m = [0, 0, 0], q = [0, 0, 0], n = 0, i, k;
+    for (var yy = -4; yy <= 4; yy++) for (var xx = -4; xx <= 4; xx++) { i = ((Y + yy) * W + X + xx) * 4; for (k = 0; k < 3; k++) { m[k] += d[i + k]; q[k] += d[i + k] * d[i + k]; } n++; }
+    var sd = 0; for (k = 0; k < 3; k++) { m[k] /= n; sd += Math.sqrt(Math.max(0, q[k] / n - m[k] * m[k])); }
+    var tol = Math.max(34, Math.min(62, 2.4 * sd / 3 * 1.7)), maxRun = Math.min(W, H) * 0.4;
+    function inSkin(px, py) {
+      var xi = Math.round(px), yi = Math.round(py); if (xi < 0 || yi < 0 || xi >= W || yi >= H) return false;
+      var j = (yi * W + xi) * 4, dr = d[j] - m[0], dg = d[j + 1] - m[1], db = d[j + 2] - m[2];
+      return Math.sqrt(dr * dr + dg * dg + db * db) < tol;
+    }
+    function run(px, py, dx, dy) { var t = 0; while (t < maxRun && inSkin(px + dx * t, py + dy * t)) t += 1.5; return t; }
+    var cx = X, cy = Y, best = null;
+    for (var it = 0; it < 3; it++) {
+      best = null;
+      for (var a = 0; a < 180; a += 6) {
+        var r = a * Math.PI / 180, dx = Math.cos(r), dy = Math.sin(r), c = run(cx, cy, dx, dy) + run(cx, cy, -dx, -dy);
+        if (!best || c < best.c) best = { c: c, dx: dx, dy: dy, a: run(cx, cy, dx, dy), b: run(cx, cy, -dx, -dy) };
+      }
+      cx += best.dx * (best.a - best.b) / 2; cy += best.dy * (best.a - best.b) / 2;   // move to the middle of the finger
+    }
+    if (!best || best.c < W * 0.02 || best.c > Math.min(W, H) * 0.3) return null;
+    var ax = -best.dy, ay = best.dx;                                       // along the finger
+    var up = run(cx, cy, ax, ay), down = run(cx, cy, -ax, -ay);
+    if (down < up) { ax = -ax; ay = -ay; }                                 // tip is the side where the finger ends sooner
+    return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c };
+  }
+
   async function localPreview() {
     placed = false; manual = false; hand = null;
     try { hand = await detect(); } catch (err) { hand = null; }
@@ -192,6 +225,8 @@
         ring.x = cl.base.x * W; ring.y = cl.base.y * H;
         ring.heading = Math.atan2((cl.tip.x - cl.base.x) * W, -((cl.tip.y - cl.base.y) * H)) * 180 / Math.PI;
         ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
+        var rf = refineAt(ring.x, ring.y);  // measure the real finger in the photo
+        if (rf && rf.fw > 0.55 * cl.width * W && rf.fw < 1.8 * cl.width * W) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; }
         placed = true; hand = { viaClaude: true };
       } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
     }
@@ -275,7 +310,7 @@
       var wait = new Promise(function (r) { setTimeout(r, 1500); });
       photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H;
       var found = await localPreview(); await wait;
-      setStatus(!useAI && found ? 'Your ring is placed on your finger. Your photo and background are unchanged.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
+      setStatus(!useAI && found ? 'Your ring is placed on your finger. If it is on the wrong finger, tap the finger you want.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
         (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
     }
     setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;
@@ -301,12 +336,15 @@
   };
 
   /* tap to place the ring: only when no hand could be found */
-  var dragging = false;
   function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; }
-  cv.addEventListener('pointerdown', function (e) { if (!photo || !manual) return; dragging = true; cv.setPointerCapture(e.pointerId); var p = pt(e); ring.x = p.x; ring.y = p.y; draw(); });
-  cv.addEventListener('pointermove', function (e) { if (!dragging) return; var p = pt(e); ring.x = p.x; ring.y = p.y; draw(); });
-  cv.addEventListener('pointerup', function () { dragging = false; });
-  cv.addEventListener('pointercancel', function () { dragging = false; });
+  cv.style.touchAction = 'pan-y';
+  cv.addEventListener('click', function (e) {                         // tap the finger: the ring moves there and fits to that finger
+    if (!photo || !placed || generating) return;
+    var p = pt(e), rf = refineAt(p.x, p.y);
+    if (rf) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; manual = false; setStatus('Ring moved to the finger you tapped.'); }
+    else { ring.x = p.x; ring.y = p.y; manual = true; setStatus('Could not measure that finger, so the ring is placed where you tapped. Tap the middle of the finger.'); }
+    draw();
+  });
 
   $('#save').onclick = async function () {
     if (openUrl) { window.open(openUrl, '_blank'); return; }
