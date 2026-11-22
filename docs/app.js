@@ -160,7 +160,7 @@
   }
   /* Inside the Claude preview page the hand files cannot be loaded, so Claude finds the finger from the photo instead. */
   var FIND_PROMPT = 'This photo shows a hand. Look at the hand closest to the camera. List its four fingers other than the thumb, in order starting from the finger next to the thumb: index, middle, ring, little. ' +
-    'For each finger give: tip = the very end of the finger; base = the centre of the finger\'s lower segment, between the knuckle where it joins the hand and the first joint (where a ring sits); width = the thickness of the finger at base as a fraction of the image width. ' +
+    'For each finger give: tip = the very end of the finger; base = the middle of the finger at its very bottom, where it joins the hand (level with the skin folds between the fingers); width = the thickness of the finger halfway between base and tip, as a fraction of the image width. ' +
     'All x and y values are fractions from 0 to 1 of the image width and height, from the top-left corner. ' +
     'Reply with only one JSON object: {"found":true,"fingers":[{"name":"index","tip":{"x":0.0,"y":0.0},"base":{"x":0.0,"y":0.0},"width":0.0},{"name":"middle",...},{"name":"ring",...},{"name":"little",...}]}. ' +
     'If the fingers are not clearly visible reply {"found":false}.';
@@ -184,7 +184,7 @@
      shortest way across it as the finger width, and the way along it as the finger direction. */
   var pix = null, pixFor = null;
   function pixels() { if (pixFor !== photo) { pix = photo.getContext('2d').getImageData(0, 0, W, H).data; pixFor = photo; } return pix; }
-  function refineAt(x0, y0, hint) {
+  function refineAt(x0, y0, hint, fwEst) {
     var d; try { d = pixels(); } catch (e) { return null; }
     var X = Math.max(4, Math.min(W - 5, Math.round(x0))), Y = Math.max(4, Math.min(H - 5, Math.round(y0)));
     var m = [0, 0, 0], q = [0, 0, 0], n = 0, i, k;
@@ -222,16 +222,33 @@
     }
     return { x: cx, y: cy, heading: Math.atan2(ax, -ay) * 180 / Math.PI, fw: best.c, tip: run(cx, cy, ax, ay), web: web };
   }
-  /* A ring sits low on the finger, a little above the knuckle web. Slide the point there and measure again. */
-  function settle(rf) {
-    var d;                                                       // distance to move towards the fingertip
-    if (rf.web > 0) d = -(rf.web - 0.65 * rf.fw) ; else d = rf.tip - 2.7 * rf.fw;
-    if (rf.web <= 0 && (rf.tip > 7 * rf.fw || rf.tip < 1.5 * rf.fw)) return rf;      // tip distance not trustworthy: leave the ring where it is
-    if (Math.abs(d) > 3 * rf.fw) return rf;
-    var h = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(h) * d, rf.y - Math.cos(h) * d, { dx: Math.sin(h), dy: -Math.cos(h) });
-    return r2 && Math.abs(r2.fw - rf.fw) < 0.35 * rf.fw ? r2 : rf;
+  /* A close-up of the finger is sent to Claude, which marks the two edges of the finger and the line along it.
+     A close-up is much easier to read than the whole photo, so this gives the real finger width and direction. */
+  var ZOOM_PROMPT = 'This is a close-up of one finger. The finger runs through the middle of the picture. Give four points as fractions of the picture width and height (0 to 1, from the top-left corner): ' +
+    '"left" and "right" = the two side edges of the finger, directly across from each other, near the middle of the picture, so that the line between them crosses the finger straight (at a right angle to the finger); ' +
+    '"top" and "bottom" = the centre line of the finger where it meets the top edge and the bottom edge of the picture. ' +
+    'Reply with only one JSON object: {"left":{"x":0.0,"y":0.0},"right":{"x":0.0,"y":0.0},"top":{"x":0.0,"y":0.0},"bottom":{"x":0.0,"y":0.0}}.';
+  function okPt(p) { return p && isNum(p.x) && isNum(p.y) && p.x > -0.05 && p.x < 1.05 && p.y > -0.05 && p.y < 1.05; }
+  async function zoomFit(cx, cy, hint, fwEst) {
+    var c = window.claude; if (!c || !c.use || !photo || !fwEst) return null;
+    var ai = await c.use('sample'); if (!ai) return null;
+    var lim = await ai.limits(); if (!lim || !lim.images) return null;
+    var S = Math.round(Math.min(Math.min(W, H), Math.max(120, 3.4 * fwEst))), x0 = Math.max(0, Math.min(W - S, Math.round(cx - S / 2))), y0 = Math.max(0, Math.min(H - S, Math.round(cy - S / 2)));
+    var cc = document.createElement('canvas'); cc.width = cc.height = 512;
+    var cx2 = cc.getContext('2d'); cx2.imageSmoothingQuality = 'high'; cx2.drawImage(photo, x0, y0, S, S, 0, 0, 512, 512);
+    var blob = await toBlob(cc, 'image/jpeg', 0.92); if (!blob) return null;
+    var r = await ai.json(ZOOM_PROMPT, { images: blob });
+    if (!r || !okPt(r.left) || !okPt(r.right) || !okPt(r.top) || !okPt(r.bottom)) return null;
+    var wpx = Math.hypot((r.right.x - r.left.x) * S, (r.right.y - r.left.y) * S);
+    if (wpx < 0.6 * fwEst || wpx > 1.5 * fwEst) return null;                // does not agree with the first estimate: do not trust it
+    var mx = x0 + (r.left.x + r.right.x) / 2 * S, my = y0 + (r.left.y + r.right.y) / 2 * S;
+    var vx = (r.top.x - r.bottom.x), vy = (r.top.y - r.bottom.y), vl = Math.hypot(vx, vy) || 1; vx /= vl; vy /= vl;
+    if (vx * hint.dx + vy * hint.dy < 0) { vx = -vx; vy = -vy; }
+    if (vx * hint.dx + vy * hint.dy < 0.85) { vx = hint.dx; vy = hint.dy; }  // direction more than about 30 degrees off the first estimate: keep the first one
+    var shift = Math.hypot(mx - cx, my - cy);
+    if (shift > 0.7 * fwEst) { mx = cx + (mx - cx) * 0.7 * fwEst / shift; my = cy + (my - cy) * 0.7 * fwEst / shift; }
+    return { x: mx, y: my, heading: Math.atan2(vx, -vy) * 180 / Math.PI, fw: wpx };
   }
-
   async function localPreview() {
     placed = false; manual = false; hand = null;
     try { hand = await detect(); } catch (err) { hand = null; }
@@ -246,12 +263,14 @@
       var cl = null;
       try { cl = await claudeFinger(); } catch (err) { cl = null; }
       if (cl) {
-        ring.x = cl.base.x * W; ring.y = cl.base.y * H;
-        ring.heading = Math.atan2((cl.tip.x - cl.base.x) * W, -((cl.tip.y - cl.base.y) * H)) * 180 / Math.PI;
-        ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
         var tdx = (cl.tip.x - cl.base.x) * W, tdy = (cl.tip.y - cl.base.y) * H, tl = Math.hypot(tdx, tdy) || 1;
-        var rf = refineAt(ring.x, ring.y, { dx: tdx / tl, dy: tdy / tl });  // measure the real finger in the photo
-        if (rf && rf.fw > 0.55 * cl.width * W && rf.fw < 1.8 * cl.width * W) { rf = settle(rf); ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; }
+        ring.x = (cl.base.x + 0.2 * (cl.tip.x - cl.base.x)) * W; ring.y = (cl.base.y + 0.2 * (cl.tip.y - cl.base.y)) * H;   // a ring sits low on the finger, about a fifth of the way from the bottom
+        ring.heading = Math.atan2(tdx, -tdy) * 180 / Math.PI;
+        ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
+        try {
+          var z = await zoomFit(ring.x, ring.y, { dx: tdx / tl, dy: tdy / tl }, cl.width * W);
+          if (z) { ring.x = z.x; ring.y = z.y; ring.heading = z.heading; ppm = z.fw / FINGER_MM; }
+        } catch (err) { /* keep the first estimate */ }
         placed = true; hand = { viaClaude: true };
       } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
     }
@@ -363,11 +382,15 @@
   /* tap to place the ring: only when no hand could be found */
   function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; }
   cv.style.touchAction = 'pan-y';
-  cv.addEventListener('click', function (e) {                         // tap the finger: the ring moves there and fits to that finger
+  cv.addEventListener('click', async function (e) {                   // tap the finger: the ring moves there and fits to that finger
     if (!photo || !placed || generating) return;
-    var hr = ring.heading * Math.PI / 180, p = pt(e), rf = refineAt(p.x, p.y, { dx: Math.sin(hr), dy: -Math.cos(hr) });
-    if (rf) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; manual = false; setStatus('Ring moved to the finger you tapped.'); }
-    else { ring.x = p.x; ring.y = p.y; manual = true; setStatus('Could not measure that finger, so the ring is placed where you tapped. Tap the middle of the finger.'); }
+    var hr = ring.heading * Math.PI / 180, p = pt(e), hint = { dx: Math.sin(hr), dy: -Math.cos(hr) }, fwNow = (ppm || W * 0.0095) * FINGER_MM, z = null;
+    setBusy(true, 'Fitting the ring to that finger…');
+    try { z = await zoomFit(p.x, p.y, hint, fwNow); } catch (err) { z = null; }
+    setBusy(false);
+    var rf = z || refineAt(p.x, p.y, hint);
+    if (rf && rf.fw > 0.6 * fwNow && rf.fw < 1.6 * fwNow) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; manual = false; setStatus('Ring moved to the finger you tapped.'); }
+    else { ring.x = p.x; ring.y = p.y; manual = true; setStatus('Ring placed where you tapped. Tap the middle of the finger.'); }
     draw();
   });
 
