@@ -11,7 +11,7 @@ window.PRODUCTS = [
     stone: "Green stones with white stone halo",
     desc: "A bold square cluster ring with nine green stones inside a double halo of white stones.",
     photo: "images/ring-1.jpg",
-    cut: "images/ring-1-cut.png", cw: 185, ch: 217, widthMm: 13
+    cut: "images/ring-1-cut.png", cw: 370, ch: 434, widthMm: 13
   },
   {
     id: "ring-2",
@@ -20,7 +20,7 @@ window.PRODUCTS = [
     stone: "Blue pear-cut stone with white stone halo",
     desc: "A pear-cut blue stone surrounded by a halo of small white stones, on a stone-set band.",
     photo: "images/ring-2.jpg",
-    cut: "images/ring-2-cut.png", cw: 213, ch: 272, widthMm: 11, rot: 9
+    cut: "images/ring-2-cut.png", cw: 426, ch: 544, widthMm: 11, rot: 9
   },
   {
     id: "ring-3",
@@ -29,6 +29,6 @@ window.PRODUCTS = [
     stone: "Red oval stone with white stone halo",
     desc: "A classic red oval stone ringed by white stones. Easy to wear every day.",
     photo: "images/ring-3.jpg",
-    cut: "images/ring-3-cut.png", cw: 127, ch: 135, widthMm: 9.5
+    cut: "images/ring-3-cut.png", cw: 254, ch: 270, widthMm: 9.5
   }
 ];

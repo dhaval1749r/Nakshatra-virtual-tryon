@@ -109,39 +109,42 @@
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, hw, 0, 7); ctx.fill(); ctx.restore();
   }
 
-  /* The silver band round the finger. It leaves the stone at its shoulders, gets thinner towards the sides, is bright on top
-     and darker underneath like a polished round wire, and fades out where it turns round the finger. */
+  /* The silver band round the finger: a polished round wire that goes across the whole finger and turns round its sides.
+     Bright along the top, darker underneath with a little warm skin colour reflected in it, darker where it turns away at the sides,
+     with a soft shadow on the skin along it. */
   function drawBand(mm, sk) {
-    var fw = Math.max(20, FINGER_MM * mm * 0.97), t0 = Math.max(4, 1.8 * mm), half = fw / 2, e = fw * 0.045;
+    var fw = Math.max(24, FINGER_MM * mm), dl = fw * 0.035, half = fw / 2 + dl, w = Math.max(3, 1.75 * mm), e = fw * 0.04;
     var L = sk.light, c = function (v, k) { k = k || 0; return 'rgb(' + [Math.round(Math.min(255, (v * (1 - k) + sk.r * k) * L)), Math.round(Math.min(255, (v * (1 - k) + sk.g * k) * L)), Math.round(Math.min(255, (v * (1 - k) + sk.b * k) * L))] + ')'; };
-    var bw = Math.ceil(fw), bh = Math.ceil(t0 * 1.3), oc = document.createElement('canvas'); oc.width = bw; oc.height = bh;
-    var o = oc.getContext('2d'), mid = bh / 2;
-    o.beginPath(); o.moveTo(0, mid - t0 * 0.25); o.lineTo(0, mid + t0 * 0.25);                 // thick near the stone, thin at the sides
-    for (var x = 0; x <= bw; x += 2) { var f = Math.abs(x - bw / 2) / (bw / 2), tt = t0 * (1 - 0.5 * f * f) / 2; if (x === 0) continue; o.lineTo(x, mid + tt); }
-    for (x = bw; x >= 0; x -= 2) { var f2 = Math.abs(x - bw / 2) / (bw / 2), tb = t0 * (1 - 0.5 * f2 * f2) / 2; o.lineTo(x, mid - tb); }
-    o.closePath();
-    var g = o.createLinearGradient(0, mid - t0 / 2, 0, mid + t0 / 2);                           // across the band: top highlight, body, dark underside
-    g.addColorStop(0, c(255, 0.03)); g.addColorStop(0.22, c(240, 0.07)); g.addColorStop(0.5, c(196, 0.12)); g.addColorStop(0.8, c(140, 0.16)); g.addColorStop(1, c(100, 0.2));
+    var bw = Math.ceil(half * 2) + 4, bh = Math.ceil(w * 1.8), mid = bh / 2, oc = document.createElement('canvas'); oc.width = bw; oc.height = bh;
+    var o = oc.getContext('2d'), x0 = 2, x1 = bw - 2, r = w / 2;
+    o.beginPath(); o.moveTo(x0 + r, mid - r); o.lineTo(x1 - r, mid - r); o.arc(x1 - r, mid, r, -Math.PI / 2, Math.PI / 2); o.lineTo(x0 + r, mid + r); o.arc(x0 + r, mid, r, Math.PI / 2, Math.PI * 1.5); o.closePath();
+    var g = o.createLinearGradient(0, mid - r, 0, mid + r);
+    g.addColorStop(0, c(255, 0.03)); g.addColorStop(0.14, c(246, 0.05)); g.addColorStop(0.3, c(206, 0.1)); g.addColorStop(0.5, c(140, 0.14)); g.addColorStop(0.7, c(188, 0.2)); g.addColorStop(0.88, c(116, 0.26)); g.addColorStop(1, c(74, 0.3));   // polished metal: bright top, dark middle, light reflected from below
     o.fillStyle = g; o.fill();
-    o.globalCompositeOperation = 'source-atop';                                                  // sides turn away from the light
-    var gx = o.createLinearGradient(0, 0, bw, 0);
-    gx.addColorStop(0, 'rgba(30,20,20,.45)'); gx.addColorStop(0.18, 'rgba(30,20,20,0)'); gx.addColorStop(0.82, 'rgba(30,20,20,0)'); gx.addColorStop(1, 'rgba(30,20,20,.45)');
+    o.save(); o.clip();
+    var ref = o.createLinearGradient(0, mid, 0, mid + r);                                        // warm skin colour reflected in the underside
+    ref.addColorStop(0, 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',0)'); ref.addColorStop(1, 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.3)');
+    o.fillStyle = ref; o.fillRect(0, mid, bw, r);
+    var gx = o.createLinearGradient(x0, 0, x1, 0);                                               // darker where the band turns away at the sides
+    gx.addColorStop(0, 'rgba(25,14,10,.62)'); gx.addColorStop(0.08, 'rgba(25,14,10,.34)'); gx.addColorStop(0.22, 'rgba(25,14,10,.06)'); gx.addColorStop(0.5, 'rgba(25,14,10,0)');
+    gx.addColorStop(0.78, 'rgba(25,14,10,.06)'); gx.addColorStop(0.92, 'rgba(25,14,10,.34)'); gx.addColorStop(1, 'rgba(25,14,10,.62)');
     o.fillStyle = gx; o.fillRect(0, 0, bw, bh);
-    o.globalCompositeOperation = 'destination-in';                                               // and fades out round the finger
-    var ga = o.createLinearGradient(0, 0, bw, 0);
-    ga.addColorStop(0, 'rgba(0,0,0,0)'); ga.addColorStop(0.1, 'rgba(0,0,0,.85)'); ga.addColorStop(0.2, 'rgba(0,0,0,1)'); ga.addColorStop(0.8, 'rgba(0,0,0,1)'); ga.addColorStop(0.9, 'rgba(0,0,0,.85)'); ga.addColorStop(1, 'rgba(0,0,0,0)');
-    o.fillStyle = ga; o.fillRect(0, 0, bw, bh);
-    // soft shadow on the skin along the band
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(-half, e + t0 * 0.35);
-    ctx.quadraticCurveTo(0, -e + t0 * 0.35, half, e + t0 * 0.35);
-    ctx.strokeStyle = 'rgba(40,18,10,.0)'; ctx.lineWidth = 1;
+    var sp = o.createLinearGradient(x0, 0, x1, 0);                                               // thin bright reflection along the top of the wire
+    sp.addColorStop(0.04, 'rgba(255,255,255,0)'); sp.addColorStop(0.2, 'rgba(255,255,255,.55)'); sp.addColorStop(0.5, 'rgba(255,255,255,.95)'); sp.addColorStop(0.8, 'rgba(255,255,255,.55)'); sp.addColorStop(0.96, 'rgba(255,255,255,0)');
+    o.strokeStyle = sp; o.lineCap = 'round'; o.lineWidth = Math.max(1, w * 0.13);
+    o.beginPath(); o.moveTo(x0 + r, mid - r * 0.45); o.lineTo(x1 - r, mid - r * 0.45); o.stroke();
+    o.restore();
+    ctx.save();                                                                                   // shadow on the skin: soft, and a thin dark line along both edges
+    var curve = function (dy) { ctx.beginPath(); ctx.moveTo(-half, e + dy); ctx.quadraticCurveTo(0, -e + dy, half, e + dy); };
     var sg = ctx.createLinearGradient(-half, 0, half, 0);
-    sg.addColorStop(0, 'rgba(40,18,10,0)'); sg.addColorStop(0.15, 'rgba(40,18,10,.34)'); sg.addColorStop(0.85, 'rgba(40,18,10,.34)'); sg.addColorStop(1, 'rgba(40,18,10,0)');
-    ctx.strokeStyle = sg; ctx.lineWidth = t0 * 0.9; ctx.shadowColor = 'rgba(40,18,10,.35)'; ctx.shadowBlur = t0 * 1.1; ctx.stroke();
+    sg.addColorStop(0, 'rgba(40,18,10,.1)'); sg.addColorStop(0.15, 'rgba(40,18,10,.4)'); sg.addColorStop(0.85, 'rgba(40,18,10,.4)'); sg.addColorStop(1, 'rgba(40,18,10,.1)');
+    curve(w * 0.45); ctx.strokeStyle = sg; ctx.lineWidth = w * 0.9; ctx.shadowColor = 'rgba(40,18,10,.4)'; ctx.shadowBlur = w * 1.1; ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    curve(-w * 0.55); ctx.strokeStyle = 'rgba(50,25,15,.2)'; ctx.lineWidth = Math.max(1, w * 0.12); ctx.stroke();
+    curve(w * 0.55); ctx.strokeStyle = 'rgba(50,25,15,.26)'; ctx.stroke();
     ctx.restore();
-    // the band itself, bent so its sides curve down round the finger
-    for (var i = 0; i < bw; i++) { var xf = (i - bw / 2) / (bw / 2); ctx.drawImage(oc, i, 0, 1, bh, -half + i, e * xf * xf - bh / 2, 1.2, bh); }
+    var n = bw - 4;                                                                               // the wire itself, bent so its two sides curve down round the finger
+    for (var i = 0; i < n; i++) { var xf = (i - n / 2) / (n / 2); ctx.drawImage(oc, i + 2, 0, 1, bh, -half + i * (half * 2 / n), e * xf * xf - mid, half * 2 / n + 0.6, bh); }
   }
 
   /* ---- quick preview on the device: MediaPipe Hands finds the finger (files bundled in vendor/hands) ---- */
@@ -379,11 +382,13 @@
     var f = e.target.files && e.target.files[0]; if (!f) return;
     try {
       var bmp = await new Promise(function (res, rej) { var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('image')); }; im.src = u; });
-      var sc = Math.min(1, 1100 / Math.max(bmp.naturalWidth, bmp.naturalHeight));
+      var sc = Math.min(1, 2400 / Math.max(bmp.naturalWidth, bmp.naturalHeight), 1500 / Math.min(bmp.naturalWidth, bmp.naturalHeight));   // keep the photo sharp
       W = Math.round(bmp.naturalWidth * sc); H = Math.round(bmp.naturalHeight * sc);
       var off = document.createElement('canvas'); off.width = W; off.height = H; off.getContext('2d').drawImage(bmp, 0, 0, W, H);
       photo = originalPhoto = off; cv.width = W; cv.height = H;
-      photoBlob = await toBlob(off, 'image/jpeg', 0.9);
+      var ss = Math.min(1, 1100 / Math.max(W, H)), sm = document.createElement('canvas'); sm.width = Math.round(W * ss); sm.height = Math.round(H * ss);
+      sm.getContext('2d').drawImage(off, 0, 0, sm.width, sm.height);                  // a smaller copy is what gets sent for the finger search
+      photoBlob = await toBlob(sm, 'image/jpeg', 0.9);
     } catch (err) { setStatus('That file could not be opened as a picture. Please use a JPG or PNG photo.', true); return; }
     e.target.value = '';
     placed = false; manual = false; hand = null; ppm = 0; openUrl = null;
