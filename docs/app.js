@@ -275,14 +275,15 @@
      A close-up is much easier to read than the whole photo, so this gives the real finger width and direction. */
   var ZOOM_PROMPT = 'This is a close-up of one finger. The finger runs through the middle of the picture. Give four points as fractions of the picture width and height (0 to 1, from the top-left corner): ' +
     '"left" and "right" = the two side edges of the finger, directly across from each other, near the middle of the picture, so that the line between them crosses the finger straight (at a right angle to the finger); ' +
-    '"top" and "bottom" = the centre line of the finger where it meets the top edge and the bottom edge of the picture. ' +
-    'Reply with only one JSON object: {"left":{"x":0.0,"y":0.0},"right":{"x":0.0,"y":0.0},"top":{"x":0.0,"y":0.0},"bottom":{"x":0.0,"y":0.0}}.';
+    '"top" and "bottom" = the centre line of the finger where it meets the top edge and the bottom edge of the picture; ' +
+    '"web" = the middle of the skin fold at the very bottom of the finger, where the finger joins the rest of the hand (between this finger and the next ones). Leave "web" out if it is not in the picture. ' +
+    'Reply with only one JSON object: {"left":{"x":0.0,"y":0.0},"right":{"x":0.0,"y":0.0},"top":{"x":0.0,"y":0.0},"bottom":{"x":0.0,"y":0.0},"web":{"x":0.0,"y":0.0}}.';
   function okPt(p) { return p && isNum(p.x) && isNum(p.y) && p.x > -0.05 && p.x < 1.05 && p.y > -0.05 && p.y < 1.05; }
   async function zoomFit(cx, cy, hint, fwEst) {
     var c = window.claude; if (!c || !c.use || !photo || !fwEst) return null;
     var ai = await c.use('sample'); if (!ai) return null;
     var lim = await ai.limits(); if (!lim || !lim.images) return null;
-    var S = Math.round(Math.min(Math.min(W, H), Math.max(120, 3.4 * fwEst))), x0 = Math.max(0, Math.min(W - S, Math.round(cx - S / 2))), y0 = Math.max(0, Math.min(H - S, Math.round(cy - S / 2)));
+    var S = Math.round(Math.min(Math.min(W, H), Math.max(120, 4.4 * fwEst))), x0 = Math.max(0, Math.min(W - S, Math.round(cx - S / 2))), y0 = Math.max(0, Math.min(H - S, Math.round(cy - S / 2)));
     var cc = document.createElement('canvas'); cc.width = cc.height = 512;
     var cx2 = cc.getContext('2d'); cx2.imageSmoothingQuality = 'high'; cx2.drawImage(photo, x0, y0, S, S, 0, 0, 512, 512);
     var blob = await toBlob(cc, 'image/jpeg', 0.92); if (!blob) return null;
@@ -296,6 +297,11 @@
     if (vx * hint.dx + vy * hint.dy < 0.85) { vx = hint.dx; vy = hint.dy; }  // direction more than about 30 degrees off the first estimate: keep the first one
     var shift = Math.hypot(mx - cx, my - cy);
     if (shift > 0.7 * fwEst) { mx = cx + (mx - cx) * 0.7 * fwEst / shift; my = cy + (my - cy) * 0.7 * fwEst / shift; }
+    if (okPt(r.web)) {                                                       // a ring sits just above the knuckle web: put it there
+      var wx = x0 + r.web.x * S, wy = y0 + r.web.y * S, al = (wx - mx) * vx + (wy - my) * vy;   // web position along the finger, from the middle point
+      var px = mx + vx * al, py = my + vy * al, tx = px + vx * 0.8 * wpx, ty = py + vy * 0.8 * wpx;   // on the finger's middle line, 0.8 finger-widths above the web
+      if (al < 0 && Math.hypot(tx - mx, ty - my) < 2.4 * wpx) { mx = tx; my = ty; }
+    }
     return { x: mx, y: my, heading: Math.atan2(vx, -vy) * 180 / Math.PI, fw: wpx };
   }
   async function localPreview() {
@@ -313,7 +319,7 @@
       try { cl = await claudeFinger(); } catch (err) { cl = null; }
       if (cl) {
         var tdx = (cl.tip.x - cl.base.x) * W, tdy = (cl.tip.y - cl.base.y) * H, tl = Math.hypot(tdx, tdy) || 1;
-        ring.x = (cl.base.x + 0.2 * (cl.tip.x - cl.base.x)) * W; ring.y = (cl.base.y + 0.2 * (cl.tip.y - cl.base.y)) * H;   // a ring sits low on the finger, about a fifth of the way from the bottom
+        ring.x = (cl.base.x + 0.1 * (cl.tip.x - cl.base.x)) * W; ring.y = (cl.base.y + 0.1 * (cl.tip.y - cl.base.y)) * H;   // a ring sits low on the finger, close to its bottom
         ring.heading = Math.atan2(tdx, -tdy) * 180 / Math.PI;
         ppm = cl.width * W / FINGER_MM;     // finger width in pixels / 16 mm
         try {
