@@ -7,36 +7,85 @@
 
   /* ---------- shop page ---------- */
   var ST = window.NAKSHATRA_STORE || {};
-  var cat = 'All';
-  function cats() { var c = ['All']; P.forEach(function (p) { var k = p.cat || 'Rings'; if (c.indexOf(k) < 0) c.push(k); }); return c; }
-  function renderGrid() {
-    $('#filters').innerHTML = cats().map(function (c) { return '<button type="button" data-cat="' + esc(c) + '" aria-pressed="' + (c === cat) + '">' + esc(c) + '</button>'; }).join('');
-    $('#grid').innerHTML = P.filter(function (p) { return cat === 'All' || (p.cat || 'Rings') === cat; }).map(function (p) {
-      return '<article class="card"><div class="ph"><img src="' + esc(p.photo) + '" alt="' + esc(p.name) + '" loading="lazy"><span class="badge">' + esc(p.cat || 'Rings') + '</span>' +
-        '<button class="tryb" type="button" data-try="' + p.id + '">✦ Try-On</button></div>' +
-        '<div class="body"><h3>' + esc(p.name) + '</h3><p class="meta">' + esc(p.material) + ' · ' + esc(p.stone) + '</p>' +
-        '<p>' + esc(p.desc) + '</p><button class="ask" type="button" data-ask="' + p.id + '">Ask price</button></div></article>';
-    }).join('');
-  }
-  renderGrid();
-  $('#filters').addEventListener('click', function (e) { var b = e.target.closest('[data-cat]'); if (b) { cat = b.dataset.cat; renderGrid(); } });
-  $('#grid').addEventListener('click', function (e) {
-    var t = e.target.closest('[data-try]'), a = e.target.closest('[data-ask]');
-    if (t) { openStudio(); choose(t.dataset.try); }
-    if (a) { openChat(); ask('What is the price of the ' + byId[a.dataset.ask].name + '?'); }
+  var TIER = { normal: 'Normal Jewellery', premium: 'Premium Jewellery', ultra: 'Ultra Premium' };
+  var CATORDER = ['Rings', 'Bracelets', 'Earrings', 'Chains', 'Kadas', 'Necklaces', 'Sets'];
+  var ALL = (window.CATALOG || []).map(function (x) {
+    return { id: x.id, tier: x.tier, cat: x.cat, code: x.code, img: x.img, name: x.tier === 'ultra' ? 'Ultra Premium ' + x.code : x.code };
   });
-  $('#statCount').textContent = P.length;
+  P.forEach(function (p) { ALL.push({ id: p.id, tier: 'premium', cat: 'Rings', code: p.name, name: p.name, img: p.photo, tryon: p.id, desc: p.desc }); });
+  ALL.forEach(function (x, i) { x.ord = i; });
+  var catItem = {}; ALL.forEach(function (x) { catItem[x.id] = x; });
+  function inTier(t) { return ALL.filter(function (x) { return x.tier === t; }).sort(function (a, b) { return CATORDER.indexOf(a.cat) - CATORDER.indexOf(b.cat) || a.ord - b.ord; }); }
+  function waLink(x) { return 'https://wa.me/' + (ST.whatsapp || '') + '?text=' + encodeURIComponent('Hello Nakshatra Jewellers, I want to order: ' + x.name + ' (' + TIER[x.tier] + '). Please share the price and availability.'); }
+  function cardHtml(x) {
+    var tryb = x.tryon ? '<button class="tryb" type="button" data-try="' + x.tryon + '">✦ Try-On</button>' : '';
+    return '<article class="card"><div class="ph"><button type="button" class="phb" data-open="' + x.id + '" aria-label="View ' + esc(x.name) + '"><img src="' + esc(x.img) + '" alt="' + esc(x.name) + '" loading="lazy"></button>' + tryb + '</div>' +
+      '<div class="body"><h3>' + esc(x.name) + '</h3><p class="meta">' + esc(x.cat) + ' · ' + esc(TIER[x.tier]) + '</p>' +
+      '<div class="row"><a class="ord" href="' + esc(waLink(x)) + '" target="_blank" rel="noopener">Order</a><button class="ask" type="button" data-open="' + x.id + '">View</button></div></div></article>';
+  }
+  function chipsHtml(list, cur, key) { return list.map(function (c) { return '<button type="button" data-' + key + '="' + esc(c) + '" aria-pressed="' + (c === cur) + '">' + esc(c) + '</button>'; }).join(''); }
+  function catsOf(items) { var c = ['All']; CATORDER.forEach(function (k) { if (items.some(function (x) { return x.cat === k; })) c.push(k); }); return c; }
+
+  /* ultra premium sets */
+  $('#sets').innerHTML = inTier('ultra').map(function (x, i) {
+    return '<article class="set"><button type="button" class="setimg" data-open="' + x.id + '" aria-label="View ' + esc(x.name) + '"><img src="' + esc(x.img) + '" alt="' + esc(x.name) + '" loading="lazy"></button>' +
+      '<div class="setbody"><p class="tag">✦ Ultra Premium · Set ' + (i + 1) + '</p><h3>' + esc(x.name) + '</h3><p>Necklace with matching earrings.</p>' +
+      '<div class="actions"><a class="btn wa" href="' + esc(waLink(x)) + '" target="_blank" rel="noopener">Order on WhatsApp</a><a class="btn gold" href="tel:' + esc(ST.phoneTel || '') + '">Call</a></div></div></article>';
+  }).join('');
+
+  /* premium */
+  var PREM = inTier('premium'), pCat = 'All';
+  function renderPrem() {
+    $('#pFilters').innerHTML = chipsHtml(catsOf(PREM), pCat, 'pcat');
+    $('#pGrid').innerHTML = PREM.filter(function (x) { return pCat === 'All' || x.cat === pCat; }).map(cardHtml).join('');
+  }
+  renderPrem();
+  $('#pFilters').addEventListener('click', function (e) { var b = e.target.closest('[data-pcat]'); if (b) { pCat = b.dataset.pcat; renderPrem(); } });
+
+  /* normal */
+  var NORM = inTier('normal'), nCat = 'All', nShown = 12;
+  function renderNorm() {
+    var list = NORM.filter(function (x) { return nCat === 'All' || x.cat === nCat; });
+    $('#nFilters').innerHTML = chipsHtml(catsOf(NORM), nCat, 'ncat');
+    $('#nGrid').innerHTML = list.slice(0, nShown).map(cardHtml).join('');
+    $('#nMore').hidden = list.length <= nShown;
+    $('#nMore').textContent = 'Show more (' + (list.length - nShown) + ' more)';
+  }
+  renderNorm();
+  $('#nFilters').addEventListener('click', function (e) { var b = e.target.closest('[data-ncat]'); if (b) { nCat = b.dataset.ncat; nShown = 12; renderNorm(); } });
+  $('#nMore').onclick = function () { nShown += 12; renderNorm(); };
+
+  /* piece detail */
+  var curPiece = null;
+  function openPiece(id) {
+    var x = catItem[id]; if (!x) return; curPiece = x;
+    $('#pmImg').src = x.img; $('#pmImg').alt = x.name; $('#pmTier').textContent = TIER[x.tier]; $('#pmTitle').textContent = x.name;
+    $('#pmMeta').textContent = x.cat + (x.desc ? ' · ' + x.desc : '');
+    $('#pmWa').href = waLink(x); $('#pmCall').href = 'tel:' + (ST.phoneTel || ''); $('#pmTry').hidden = !x.tryon;
+    $('#pmodal').hidden = false; document.body.classList.add('lock');
+  }
+  function closePiece() { $('#pmodal').hidden = true; if ($('#studioWrap').hidden) document.body.classList.remove('lock'); }
+  $('#pmClose').onclick = closePiece;
+  $('#pmodal').addEventListener('click', function (e) { if (e.target === this) closePiece(); });
+  $('#pmTry').onclick = function () { if (curPiece && curPiece.tryon) { closePiece(); openStudio(); choose(curPiece.tryon); } };
+  document.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-open]'), t = e.target.closest('[data-try]');
+    if (t) { openStudio(); choose(t.dataset.try); } else if (o) openPiece(o.dataset.open);
+  });
+  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#pmodal').hidden) closePiece(); });
+
+  $('#statCount').textContent = ALL.length + '+';
   $('#showcase').innerHTML = P.slice(0, 3).map(function (p) { return '<div style="background-image:url(' + esc(p.photo) + ')"></div>'; }).join('');
   $('#stAddr').textContent = ST.address || ''; $('#stHours').textContent = ST.hours || ''; $('#stPhone').textContent = ST.phoneShow || '';
   $('#stCall').href = 'tel:' + (ST.phoneTel || '');
-  $('#stWa').href = 'https://wa.me/' + (ST.whatsapp || '') + '?text=' + encodeURIComponent('Hello, I would like to visit the shop.');
+  $('#stWa').href = 'https://wa.me/' + (ST.whatsapp || '') + '?text=' + encodeURIComponent('Hello Nakshatra Jewellers, I would like to order / visit the shop.');
   $('#stDir').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ST.mapQuery || ST.address || '');
 
   /* menu, studio overlay */
   $('#menuBtn').onclick = function () { var m = $('#menu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
   $('#menu').addEventListener('click', function (e) { if (e.target.closest('a')) { $('#menu').hidden = true; $('#menuBtn').setAttribute('aria-expanded', 'false'); } });
   function openStudio() { $('#studioWrap').hidden = false; document.body.classList.add('lock'); $('#studioWrap').scrollTop = 0; draw(); }
-  function closeStudio() { $('#studioWrap').hidden = true; document.body.classList.remove('lock'); }
+  function closeStudio() { $('#studioWrap').hidden = true; if ($('#pmodal').hidden) document.body.classList.remove('lock'); }
   document.querySelectorAll('[data-open-studio]').forEach(function (b) { b.addEventListener('click', openStudio); });
   document.querySelectorAll('[data-open-chat]').forEach(function (b) { b.addEventListener('click', function () { openChat(); }); });
   $('#studioClose').onclick = closeStudio;
@@ -481,33 +530,87 @@
 
   /* ---------- chat ---------- */
   var FAQ = [
-    ['What are the rings made of?', 'These three rings are silver with coloured stones and a halo of small white stones.'],
-    ['How does the try-on work?', 'Add a clear photo of the back of your hand, choose a ring and press Generate try-on. After a short wait, AI shows the ring on your finger.'],
-    ['What is the price?', 'The price depends on the ring and on the day. Please contact the shop and we will confirm the price for the ring you like.'],
-    ['How do I buy?', 'Tell the shop which ring you like. This website does not take payments.']
+    ['Show Ultra Premium sets', 'ULTRA'],
+    ['Premium rings', 'PREM_RINGS'],
+    ['How do I order?', 'ORDER'],
+    ['Where is the shop?', 'SHOP'],
+    ['Try-on kaise kare?', 'TRYON']
   ];
   var msgs = $('#msgs'), sampleFn = null, turns = [], busy = false;
   function bubble(cls, t) { var d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = t; msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d; }
+  function suggest(ids) {
+    if (!ids || !ids.length) return;
+    var d = document.createElement('div'); d.className = 'sug';
+    d.innerHTML = ids.slice(0, 4).map(function (id) { var x = catItem[id]; return x ? '<button type="button" data-open="' + x.id + '"><img src="' + esc(x.img) + '" alt=""><span>' + esc(x.name) + '</span></button>' : ''; }).join('');
+    msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight;
+  }
+  function pick(tier, cat, n) { return ALL.filter(function (x) { return (!tier || x.tier === tier) && (!cat || x.cat === cat); }).slice(0, n || 4).map(function (x) { return x.id; }); }
+  var KW = [
+    ['ULTRA', /ultra|wedding|shaadi|shadi|bridal|dulhan|set\b|sets\b|haar/i],
+    ['ORDER', /order|buy|kharid|lena|book|booking|purchase|le sakta|mangwa/i],
+    ['PRICE', /price|rate|cost|kimat|kitne|kitna|bhav|budget|paise|₹|rs\b/i],
+    ['SHOP', /where|address|location|kaha|kahan|shop|store|visit|direction|map|timing|time|open|khula/i],
+    ['CALL', /call|phone|number|contact|baat/i],
+    ['TRYON', /try|trial|pahan|pehen|photo|virtual/i],
+    ['RING', /ring|anguthi|angoothi|ungli/i],
+    ['EAR', /ear|jhumk|bali|bhali|kaan|studs?/i],
+    ['CHAIN', /chain|zanjeer/i],
+    ['KADA', /kada|kade|kara\b/i],
+    ['BRACE', /bracelet|bracelets/i],
+    ['NECK', /necklace|neck|gala/i],
+    ['PREM', /premium/i],
+    ['NORMAL', /normal|daily|everyday|roz|simple|cheap|sasta/i],
+    ['GIFT', /gift|tohfa|birthday|anniversary|present/i],
+    ['HELLO', /^(hi|hello|hey|namaste|hii+|helo)\b/i]
+  ];
+  function localReply(text) {
+    var hits = []; KW.forEach(function (k) { if (k[1].test(text)) hits.push(k[0]); });
+    var h = function (k) { return hits.indexOf(k) >= 0; };
+    if (h('ORDER')) return ['To order, tap Order on any piece and WhatsApp opens with the piece named, or call ' + (ST.phoneShow || 'the shop') + '. The shop confirms price and availability.', []];
+    if (h('PRICE')) return ['Prices depend on the piece and on the day, so the shop confirms them. Tap Order on the piece you like and we will send the price on WhatsApp.', []];
+    if (h('SHOP')) return [(ST.address || '') + '\n' + (ST.hours || '') + '\nPhone: ' + (ST.phoneShow || ''), []];
+    if (h('CALL')) return ['You can call the shop on ' + (ST.phoneShow || '') + ' or message on WhatsApp from the Order section.', []];
+    if (h('TRYON')) return ['Virtual try-on is available for our featured rings: open Try-On, upload a clear photo of the back of your hand, pick a ring and press Generate. Try-on for more pieces is coming.', []];
+    if (h('ULTRA')) return ['Our 4 Ultra Premium sets are the showpieces, a necklace with matching earrings. Here they are:', pick('ultra', null, 4)];
+    if (h('RING')) return [h('NORMAL') ? 'Here are some rings from the Normal collection:' : 'Here are some rings from the Premium collection:', pick(h('NORMAL') ? 'normal' : 'premium', 'Rings', 4)];
+    if (h('EAR')) return ['Some earrings you may like:', pick(h('NORMAL') ? 'normal' : 'premium', 'Earrings', 4)];
+    if (h('BRACE')) return ['Premium bracelets:', pick('premium', 'Bracelets', 4)];
+    if (h('KADA')) return ['Kadas from the Normal collection:', pick('normal', 'Kadas', 4)];
+    if (h('CHAIN')) return ['Chains from the Normal collection:', pick('normal', 'Chains', 4)];
+    if (h('NECK')) return ['Necklaces to look at:', pick('normal', 'Necklaces', 3).concat(pick('ultra', null, 1))];
+    if (h('GIFT')) return ['For a gift, a ring, earrings or a bracelet from the Premium collection is a good choice:', pick('premium', 'Earrings', 2).concat(pick('premium', 'Bracelets', 2))];
+    if (h('PREM')) return ['Premium collection: rings, bracelets and earrings.', pick('premium', null, 4)];
+    if (h('NORMAL')) return ['Normal collection, for every day:', pick('normal', null, 4)];
+    if (h('HELLO')) return ['Hello! Tell me what you are looking for: a ring, earrings, a bracelet, a chain, a kada, a necklace or a wedding set.', []];
+    return ['I can show you rings, earrings, bracelets, chains, kadas, necklaces and sets, or tell you how to order and where the shop is. What would you like?', []];
+  }
   $('#faq').innerHTML = FAQ.map(function (q, i) { return '<button type="button" data-q="' + i + '">' + esc(q[0]) + '</button>'; }).join('');
-  $('#faq').addEventListener('click', function (e) { var b = e.target.closest('[data-q]'); if (!b) return; var q = FAQ[+b.dataset.q]; bubble('me', q[0]); bubble('bot', q[1]); });
-  function openChat() { $('#chat').hidden = false; $('#chatBtn').hidden = true; $('#chatBtn').setAttribute('aria-expanded', 'true'); if (!msgs.children.length) bubble('bot', 'Hello! Ask me about our rings, the try-on or visiting the shop.'); }
+  $('#faq').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-q]'); if (!b) return; var q = FAQ[+b.dataset.q]; ask(q[0]);
+  });
+  function openChat() { $('#chat').hidden = false; $('#chatBtn').hidden = true; $('#chatBtn').setAttribute('aria-expanded', 'true'); if (!msgs.children.length) bubble('bot', 'Hello! I can help you find a piece, order it, or reach the shop. What are you looking for?'); }
   function closeChat() { $('#chat').hidden = true; $('#chatBtn').hidden = false; $('#chatBtn').setAttribute('aria-expanded', 'false'); }
   $('#chatBtn').onclick = openChat; $('#chatClose').onclick = closeChat;
-  var RULES = 'You are the assistant of Nakshatra Jewellers, a small jewellery shop. Answer briefly in plain text, under 70 words, in the language the customer writes in (English, Hindi or Hinglish). ' +
-    'The shop currently shows only these rings (all silver): ' + P.map(function (p) { return p.name + ' (' + p.stone + ')'; }).join('; ') + '. ' +
-    'The website has a virtual try-on for rings using a photo of the back of the hand. The shop is at: ' + (ST.address || '') + '. Phone: ' + (ST.phoneShow || '') + '. Hours: ' + (ST.hours || '') + '. Never invent prices, offers, stock or anything else not given here. ' +
-    'For price, say the shop confirms the price for the day. For anything you do not know, say the shop will confirm.';
+  var CATSUM = ['Rings', 'Bracelets', 'Earrings', 'Chains', 'Kadas', 'Necklaces', 'Sets'].map(function (c) {
+    var n = ALL.filter(function (x) { return x.cat === c; }); return n.length ? c + ': ' + n.map(function (x) { return x.name + ' (' + x.tier + ')'; }).join(', ') : '';
+  }).filter(Boolean).join('. ');
+  var RULES = 'You are the assistant of Nakshatra Jewellers, a jewellery shop in Pune. Answer briefly in plain text, under 70 words, in the language the customer writes in (English, Hindi or Hinglish), warm and polite. ' +
+    'The shop has three collections: Normal Jewellery (rings, chains, earrings, kadas, necklaces), Premium Jewellery (rings, bracelets, earrings) and Ultra Premium (4 statement sets: necklace with earrings). Pieces: ' + CATSUM + '. ' +
+    'Virtual try-on is available only for the featured rings (Green Stone Cluster, Blue Pear Halo, Red Oval Halo) for now; try-on for more pieces is coming. Customers order by tapping Order (WhatsApp) or calling. ' +
+    'The shop is at: ' + (ST.address || '') + '. Phone: ' + (ST.phoneShow || '') + '. Hours: ' + (ST.hours || '') + '. Never invent prices, offers, stock, materials, weights or anything not given here. ' +
+    'For price, say the shop confirms the price for the day on WhatsApp or phone. For anything you do not know, say the shop will confirm.';
   async function ask(text) {
     bubble('me', text);
-    if (!sampleFn) { bubble('bot', 'Please use the questions above, or contact the shop directly for this.'); return; }
+    var lr = localReply(text);
+    if (!sampleFn) { bubble('bot', lr[0]); suggest(lr[1]); return; }
     if (busy) return; busy = true;
     turns.push({ role: 'user', content: text });
     var view = turns.slice(-12); while (view.length && view[0].role !== 'user') view.shift();
     var b = bubble('bot', '…');
     try {
       var r = await sampleFn([{ role: 'user', content: RULES }].concat(view), { cache: false, modelTier: 'quick', onText: function (u) { b.textContent = u.text; msgs.scrollTop = msgs.scrollHeight; } });
-      b.textContent = r.text; turns.push({ role: 'assistant', content: r.text });
-    } catch (e) { b.textContent = 'Sorry, I could not answer that. Please try again or contact the shop.'; turns.pop(); }
+      b.textContent = r.text; turns.push({ role: 'assistant', content: r.text }); suggest(lr[1]);
+    } catch (e) { b.textContent = lr[0]; suggest(lr[1]); turns.pop(); }
     busy = false;
   }
   $('#chatForm').onsubmit = function (e) { e.preventDefault(); var v = $('#chatIn').value.trim(); if (v) { $('#chatIn').value = ''; ask(v); } };

@@ -22,11 +22,12 @@
   </div>
   <nav class="menu" id="menu" hidden aria-label="Sections">
     <a href="#top">Home</a>
-    <a href="#collection">Collection</a>
-    <a href="#tryonfeature">AI Try-On</a>
+    <a href="#ultra">Ultra Premium</a>
+    <a href="#premium">Premium</a>
+    <a href="#normal">Normal</a>
+    <a href="#tryonfeature">Try-On</a>
     <a href="#stylist">Chatbot</a>
-    <a href="#why">Why Choose Us</a>
-    <a href="#contact">Contact Us</a>
+    <a href="#contact">Order / Contact</a>
   </nav>
 </header>
 
@@ -34,27 +35,40 @@
   <section class="hero">
     <p class="eyebrow">✦ Pune · Kondhwa</p>
     <h1>Crafted in starlight, worn with majesty</h1>
-    <p class="sub">Silver jewellery with coloured stones. Upload a photo of your hand and see each ring on your own finger before you visit the shop.</p>
+    <p class="sub">Silver and fine jewellery, from everyday pieces to our ultra premium statement sets. Order on WhatsApp or call the shop.</p>
     <div class="ctas">
-      <a class="btn ghost" href="#collection">Explore Collections →</a>
-      <button class="btn gold" type="button" data-open-studio>✦ Launch Virtual Try-On</button>
-      <button class="btn gold2" type="button" data-open-chat>💬 Ask Our Assistant</button>
+      <a class="btn gold" href="#ultra">✦ See Ultra Premium Sets</a>
+      <a class="btn ghost" href="#premium">Premium Collection →</a>
+      <a class="btn ghost" href="#normal">Normal Collection →</a>
     </div>
     <div class="stats">
-      <div><b id="statCount">3</b><span>Designs</span></div>
-      <div><b>Try-On</b><span>On your photo</span></div>
+      <div><b id="statCount">70+</b><span>Designs</span></div>
+      <div><b>3</b><span>Collections</span></div>
       <div><b>Pune</b><span>Kondhwa store</span></div>
     </div>
   </section>
 
+  <section id="ultra" class="ultra">
+    <p class="eyebrow">✦ Ultra Premium Collection</p>
+    <h2>Signature statement sets</h2>
+    <p class="lead2">Our finest necklace and earring sets, made for weddings and the evenings you remember.</p>
+    <div class="sets" id="sets"></div>
+  </section>
+
+  <section id="premium" class="band light">
+    <p class="eyebrow dark">Premium Jewellery</p>
+    <h2>Premium collection</h2>
+    <p class="lead">Rings, bracelets and earrings, picked for their finish and sparkle.</p>
+    <div class="filters" id="pFilters" role="group" aria-label="Premium filter"></div>
+    <div class="grid" id="pGrid"></div>
+  </section>
+
   <section id="tryonfeature" class="band light">
-    <p class="eyebrow dark">Virtual try-on</p>
-    <h2>Your personal jewellery studio</h2>
     <div class="feature">
       <div class="showcase" id="showcase" aria-hidden="true"></div>
-      <p class="tag">✦ Signature feature</p>
-      <h3>Virtual Try-On</h3>
-      <p>Upload a photo of the back of your hand and see our rings on you, with the true size, a natural fit and soft light and shadow. Your photo and background stay exactly as they are.</p>
+      <p class="tag">✦ Virtual Try-On</p>
+      <h3>See it on you</h3>
+      <p>Upload a photo of your hand and see our rings on your own finger, in the true size with natural light and shadow. Your photo and background stay exactly as they are.</p>
       <ul class="chips">
         <li>📷 Use your own photo</li>
         <li>✨ Photo-real result</li>
@@ -64,46 +78,47 @@
     </div>
   </section>
 
+  <section id="normal" class="band dark">
+    <p class="eyebrow">Normal Jewellery</p>
+    <h2>Normal collection</h2>
+    <p class="lead2 c">Rings, chains, earrings, kadas and necklaces for every day.</p>
+    <div class="filters dk" id="nFilters" role="group" aria-label="Collection filter"></div>
+    <div class="grid" id="nGrid"></div>
+    <p class="more"><button class="btn ghost" type="button" id="nMore">Show more</button></p>
+  </section>
+
   <section id="stylist" class="band light">
     <div class="feature soft">
       <p class="tag dark">💬 Assistant</p>
       <h3>Ask our concierge</h3>
-      <p>Gifting, everyday rings, which stone suits you, how the try-on works. Ask and get a quick answer.</p>
-      <div class="bubble me">Which ring is good for daily wear?</div>
-      <div class="bubble bot">The Red Oval Halo Ring is light and easy for every day. Want to try it on?</div>
+      <p>Which piece for a gift, a wedding or every day? Ask in English, Hindi or Hinglish and get picks from our collection.</p>
+      <div class="bubble me">Shaadi ke liye kuch bataiye</div>
+      <div class="bubble bot">Hamare Ultra Premium Sets dekhiye. Chahe to main aapko Set 02 aur Set 03 dikha deta hu.</div>
       <button class="btn dark" type="button" data-open-chat>Start chatting →</button>
     </div>
-  </section>
-
-  <section id="collection" class="band light">
-    <p class="eyebrow dark">The collection</p>
-    <h2>Curated rings</h2>
-    <p class="lead">Tap <b>Try-On</b> on any ring to see it on your hand.</p>
-    <div class="filters" id="filters" role="group" aria-label="Filter"></div>
-    <div class="grid" id="grid"></div>
   </section>
 
   <section id="why" class="band light">
     <p class="eyebrow dark">Why Nakshatra</p>
     <h2>Why choose us</h2>
     <div class="why">
-      <article><span class="ico">✦</span><h3>Try before you buy</h3><p>See every ring on your own photo before you decide.</p></article>
-      <article><span class="ico">◆</span><h3>Handpicked designs</h3><p>Silver rings with coloured stones, chosen one by one.</p></article>
+      <article><span class="ico">✦</span><h3>Three collections</h3><p>Normal, Premium and Ultra Premium, so there is a piece for every budget and occasion.</p></article>
+      <article><span class="ico">◆</span><h3>Easy ordering</h3><p>Tap Order on any piece and WhatsApp opens with the piece already named. Or call the shop.</p></article>
       <article><span class="ico">☎</span><h3>Real people in the shop</h3><p>Price and availability are confirmed by the shop, never guessed.</p></article>
     </div>
   </section>
 
   <section id="contact" class="visit">
-    <p class="eyebrow">Visit our store</p>
+    <p class="eyebrow">Order or visit</p>
     <h2>See it. Feel it. Make it yours.</h2>
-    <p class="lead2">Come to our Kondhwa store to see your favourite pieces in person.</p>
+    <p class="lead2">Order on WhatsApp, call us, or come to our Kondhwa store to see your favourite pieces in person.</p>
     <ul class="info">
       <li><span>📍</span><span id="stAddr"></span></li>
       <li><span>🕘</span><span id="stHours"></span></li>
       <li><span>📞</span><span id="stPhone"></span></li>
     </ul>
     <div class="actions">
-      <a class="btn wa" id="stWa" target="_blank" rel="noopener">Book a visit on WhatsApp</a>
+      <a class="btn wa" id="stWa" target="_blank" rel="noopener">Order on WhatsApp</a>
       <a class="btn gold" id="stCall">Call the shop</a>
       <a class="btn ghost" id="stDir" target="_blank" rel="noopener">Directions</a>
     </div>
@@ -115,6 +130,24 @@
   <p>Silver jewellery with coloured stones. Timeless pieces for every celebration.</p>
   <p class="copy">© 2026 Nakshatra Jewellers</p>
 </footer>
+
+<div class="pmodal" id="pmodal" hidden role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+  <div class="pm-card">
+    <button type="button" class="x pm-x" id="pmClose" aria-label="Close">×</button>
+    <div class="pm-img"><img id="pmImg" alt=""></div>
+    <div class="pm-info">
+      <p class="tag" id="pmTier"></p>
+      <h3 id="pmTitle"></h3>
+      <p class="meta" id="pmMeta"></p>
+      <p class="pm-note">Price and availability are confirmed by the shop.</p>
+      <div class="actions">
+        <a class="btn wa" id="pmWa" target="_blank" rel="noopener">Order on WhatsApp</a>
+        <a class="btn gold" id="pmCall">Call to order</a>
+        <button class="btn ghost" type="button" id="pmTry" hidden>✦ Try on</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Try-on studio -->
 <div class="studio-wrap" id="studioWrap" hidden role="dialog" aria-modal="true" aria-labelledby="studioTitle">
@@ -171,6 +204,7 @@
 
 <script src="config.js"></script>
 <script src="products.js"></script>
+<script src="catalog.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

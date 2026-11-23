@@ -75,17 +75,20 @@ header.site{position:sticky;top:0;z-index:40;background:rgba(14,10,7,.96);border
 .filters{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:18px auto}
 .filters button{border:1px solid var(--lline);background:#f6e8d9;color:var(--ink);padding:9px 20px;border-radius:999px;font:500 1rem var(--sans);cursor:pointer}
 .filters button[aria-pressed="true"]{background:linear-gradient(90deg,#d9b34a,#b78a1a);border-color:transparent;font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;max-width:1000px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:1000px}
 .card{background:#fbeee0;border:1px solid var(--lline);border-radius:24px;overflow:hidden;min-width:0}
 .card .ph{position:relative;background:var(--dark)}
-.card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+.card img{display:block;width:100%;aspect-ratio:4/5;object-fit:contain;background:radial-gradient(90% 70% at 50% 40%,#2a1e14,#0b0806)}
+.phb{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer}
 .card .badge{position:absolute;left:12px;top:12px;padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid var(--line);font:600 .78rem var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--cream)}
 .card .tryb{position:absolute;right:12px;bottom:12px;padding:9px 16px;border:0;border-radius:999px;background:linear-gradient(90deg,#efe0b0,#d4af37);color:#1c1306;font:600 .95rem var(--sans);cursor:pointer}
 .card .body{padding:16px 18px 20px}
 .card h3{font-size:1.15rem;margin:2px 0 6px}
 .card .meta{font-size:.9rem;color:var(--muted);margin-bottom:8px}
 .card p{font-size:.95rem;color:#4b3a2c}
-.card .ask{border:1px solid var(--goldd);background:none;color:var(--goldd);padding:8px 16px;border-radius:999px;font:600 .9rem var(--sans);cursor:pointer}
+.card .row{display:flex;gap:8px;margin-top:6px}
+.card .ask,.card .ord{border:1px solid var(--goldd);background:none;color:var(--goldd);padding:8px 18px;border-radius:999px;font:600 .9rem var(--sans);cursor:pointer;text-decoration:none}
+.card .ord{background:#25d366;border-color:#25d366;color:#06240f}
 
 /* why */
 .why{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
@@ -160,3 +163,58 @@ footer .brand{margin-bottom:14px}
 @media (max-width:820px){
   .studio{grid-template-columns:minmax(0,1fr)}
 }
+
+/* ---- premium upgrade ---- */
+.ultra{padding:64px 18px 56px;background:radial-gradient(120% 60% at 50% 0%,#3a2a12 0%,#17100a 55%,#0d0906 100%);border-top:1px solid #3a2a12;border-bottom:1px solid #3a2a12}
+.ultra>*{max-width:1000px;margin-left:auto;margin-right:auto}
+.ultra h2{text-align:center;font-size:clamp(1.8rem,6vw,3rem);background:linear-gradient(180deg,#f6e7bd,#c9a232);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ultra .eyebrow{display:block;width:max-content;max-width:100%;margin:0 auto 16px}
+.ultra .lead2{text-align:center;max-width:52ch}
+.sets{display:grid;gap:28px;margin-top:30px}
+.set{display:grid;gap:0;border:1px solid #6d5217;border-radius:30px;overflow:hidden;background:linear-gradient(180deg,#1d140b,#110b07);box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(230,201,104,.12)}
+.setimg{display:block;padding:0;border:0;background:#0b0806;cursor:pointer}
+.setimg img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;object-position:center 30%}
+.setbody{padding:22px 22px 26px}
+.setbody h3{font-size:1.5rem;color:var(--gold2)}
+.setbody p{color:var(--cream2)}
+.band.dark{background:linear-gradient(180deg,#120d09,#1b130c);color:var(--cream)}
+.band.dark h2{color:var(--gold2)}
+.band.dark .eyebrow{display:block;width:max-content;max-width:100%;margin:0 auto 16px}
+.lead2.c{text-align:center}
+.band.dark .card{background:#1d150e;border-color:#4a3a22}
+.band.dark .card h3{color:var(--cream)}
+.band.dark .card .meta{color:var(--lmuted)}
+.filters.dk button{background:#1d150e;color:var(--cream2);border-color:#4a3a22}
+.filters.dk button[aria-pressed="true"]{color:#1c1306}
+.more{text-align:center;margin-top:24px}
+.card .badge,.tag{white-space:nowrap}
+.band.light .eyebrow.dark{margin:0 auto 14px}
+
+.pmodal{position:fixed;inset:0;z-index:65;background:rgba(8,5,3,.88);display:grid;place-items:center;padding:14px;overflow-y:auto}
+.pm-card{position:relative;width:min(900px,100%);max-height:calc(100dvh - 28px);overflow-y:auto;background:linear-gradient(180deg,#1d140b,#110b07);border:1px solid #6d5217;border-radius:28px;display:grid;grid-template-columns:minmax(0,1fr);color:var(--cream)}
+.pm-img{background:#0b0806}
+.pm-img img{display:block;width:100%;max-height:62dvh;object-fit:contain;margin:0 auto}
+.pm-info{padding:20px 22px 26px}
+.pm-info h3{font-size:1.6rem;color:var(--gold2)}
+.pm-info .meta{color:var(--lmuted)}
+.pm-note{font-size:.88rem;color:var(--lmuted)}
+.pm-x{position:absolute;right:12px;top:12px;z-index:2;background:rgba(0,0,0,.55)}
+@media (min-width:760px){
+  .pm-card{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  .pm-img img{max-height:calc(100dvh - 30px)}
+  .sets{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.sug{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;align-self:stretch}
+.sug button{flex:0 0 96px;border:1px solid var(--lline);background:#fff;border-radius:14px;padding:6px;font:inherit;font-size:.74rem;cursor:pointer;color:var(--ink);text-align:center}
+.sug img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;margin-bottom:4px;background:#0b0806}
+
+.filters.dk button[aria-pressed="true"]{background:linear-gradient(90deg,#d9b34a,#b78a1a);border-color:transparent;color:#1c1306;font-weight:600}
+.card .body{padding:12px 12px 14px}
+.card h3{font-size:.95rem;letter-spacing:.01em}
+.card .meta{font-size:.78rem}
+.card .row{flex-wrap:wrap}
+.card .ask,.card .ord{padding:7px 14px;font-size:.85rem}
+.card .tryb{padding:7px 12px;font-size:.82rem}
+.card .badge{display:none}
+@media (min-width:640px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}}
+@media (min-width:960px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
