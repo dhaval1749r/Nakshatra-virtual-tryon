@@ -48,6 +48,25 @@
   $('#picks').addEventListener('click', function (e) { var b = e.target.closest('.pick'); if (b) choose(b.dataset.id); });
   choose(P[0].id);
 
+  /* the colour of the metal in the ring photo (its rim), so the band we add matches the ring */
+  var metalCache = {};
+  function metalOf(id) {
+    if (metalCache[id]) return metalCache[id];
+    var img = cuts[id], res = [205, 200, 198];
+    try {
+      var cw = 96, ch = Math.round(96 * img.naturalHeight / img.naturalWidth), cc = document.createElement('canvas'); cc.width = cw; cc.height = ch;
+      var g = cc.getContext('2d'); g.drawImage(img, 0, 0, cw, ch); var d = g.getImageData(0, 0, cw, ch).data, n = 0, r = 0, gg = 0, b = 0;
+      for (var y = 3; y < ch - 3; y++) for (var x = 3; x < cw - 3; x++) {
+        var i = (y * cw + x) * 4; if (d[i + 3] < 230) continue;
+        var edge = d[((y - 3) * cw + x) * 4 + 3] < 40 || d[((y + 3) * cw + x) * 4 + 3] < 40 || d[(y * cw + x - 3) * 4 + 3] < 40 || d[(y * cw + x + 3) * 4 + 3] < 40;
+        var lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2], mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+        if (edge && lum > 130 && (mx - mn) < 70) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; }
+      }
+      if (n > 20) res = [r / n, gg / n, b / n];
+    } catch (err) { /* keep the default silver */ }
+    return (metalCache[id] = res);
+  }
+
   function draw() {
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (!photo) {
@@ -67,13 +86,13 @@
     ctx.translate(ring.x, ring.y);
     ctx.rotate(rad);
     contactShadow(mm, s, sel);
-    ctx.save(); ctx.translate(0, sel.widthMm * (sel.ch / sel.cw) * mm * 0.1); drawBand(mm, sk); ctx.restore();       // the band leaves the stone a little below its middle
+    ctx.save(); ctx.translate(0, sel.widthMm * (sel.ch / sel.cw) * mm * 0.1); drawBand(mm, sk, metalOf(sel.id), sel.pave); ctx.restore();       // the band leaves the stone a little below its middle
     ctx.rotate((sel.rot || 0) * Math.PI / 180);          // some ring photos are slightly tilted: straighten the stone along the finger
     // the ring photo, matched to the light and skin colour of the customer's photo
     var pw = Math.max(2, Math.round(sel.cw * s)), ph = Math.max(2, Math.round(sel.ch * s));
     var oc = document.createElement('canvas'); oc.width = pw; oc.height = ph;
     var ox = oc.getContext('2d'); ox.imageSmoothingQuality = 'high';
-    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.min(0.35, 0.02 * mm + 0.1).toFixed(2) + 'px)';
+    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97)';
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
     ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
@@ -112,14 +131,16 @@
   /* The silver band round the finger: a polished round wire that goes across the whole finger and turns round its sides.
      Bright along the top, darker underneath with a little warm skin colour reflected in it, darker where it turns away at the sides,
      with a soft shadow on the skin along it. */
-  function drawBand(mm, sk) {
-    var fw = Math.max(24, FINGER_MM * mm), dl = fw * 0.035, half = fw / 2 + dl, w = Math.max(3, 1.75 * mm), e = fw * 0.04;
-    var L = sk.light, c = function (v, k) { k = k || 0; return 'rgb(' + [Math.round(Math.min(255, (v * (1 - k) + sk.r * k) * L)), Math.round(Math.min(255, (v * (1 - k) + sk.g * k) * L)), Math.round(Math.min(255, (v * (1 - k) + sk.b * k) * L))] + ')'; };
+  function drawBand(mm, sk, M, pave) {
+    var fw = Math.max(24, FINGER_MM * mm), dl = fw * 0.035, half = fw / 2 + dl, w = Math.max(3, (pave ? 2.1 : 1.75) * mm), e = fw * 0.04;
+    M = M || [205, 205, 205];
+    var L = sk.light, ch = function (v, k, m, s) { var base = 0.7 * m * v / 195 + 0.3 * v; return Math.round(Math.min(255, (base * (1 - k) + s * k) * L)); };    // the ring's own metal colour, lit like this photo
+    var c = function (v, k) { k = k || 0; return 'rgb(' + [ch(v, k, M[0], sk.r), ch(v, k, M[1], sk.g), ch(v, k, M[2], sk.b)] + ')'; };
     var bw = Math.ceil(half * 2) + 4, bh = Math.ceil(w * 1.8), mid = bh / 2, oc = document.createElement('canvas'); oc.width = bw; oc.height = bh;
     var o = oc.getContext('2d'), x0 = 2, x1 = bw - 2, r = w / 2;
     o.beginPath(); o.moveTo(x0 + r, mid - r); o.lineTo(x1 - r, mid - r); o.arc(x1 - r, mid, r, -Math.PI / 2, Math.PI / 2); o.lineTo(x0 + r, mid + r); o.arc(x0 + r, mid, r, Math.PI / 2, Math.PI * 1.5); o.closePath();
     var g = o.createLinearGradient(0, mid - r, 0, mid + r);
-    g.addColorStop(0, c(255, 0.03)); g.addColorStop(0.14, c(246, 0.05)); g.addColorStop(0.3, c(206, 0.1)); g.addColorStop(0.5, c(140, 0.14)); g.addColorStop(0.7, c(188, 0.2)); g.addColorStop(0.88, c(116, 0.26)); g.addColorStop(1, c(74, 0.3));   // polished metal: bright top, dark middle, light reflected from below
+    g.addColorStop(0, c(255, 0.03)); g.addColorStop(0.14, c(246, 0.05)); g.addColorStop(0.3, c(222, 0.08)); g.addColorStop(0.5, c(170, 0.12)); g.addColorStop(0.7, c(205, 0.16)); g.addColorStop(0.88, c(135, 0.22)); g.addColorStop(1, c(92, 0.26));   // polished metal: bright top, dark middle, light reflected from below
     o.fillStyle = g; o.fill();
     o.save(); o.clip();
     var ref = o.createLinearGradient(0, mid, 0, mid + r);                                        // warm skin colour reflected in the underside
@@ -133,6 +154,17 @@
     sp.addColorStop(0.04, 'rgba(255,255,255,0)'); sp.addColorStop(0.2, 'rgba(255,255,255,.55)'); sp.addColorStop(0.5, 'rgba(255,255,255,.95)'); sp.addColorStop(0.8, 'rgba(255,255,255,.55)'); sp.addColorStop(0.96, 'rgba(255,255,255,0)');
     o.strokeStyle = sp; o.lineCap = 'round'; o.lineWidth = Math.max(1, w * 0.13);
     o.beginPath(); o.moveTo(x0 + r, mid - r * 0.45); o.lineTo(x1 - r, mid - r * 0.45); o.stroke();
+    if (pave) {                                                                                    // small white stones set along the band, squeezed where the band turns away
+      var sr = r * 0.62, step = sr * 2.15;
+      for (var sx = x0 + r + sr; sx < x1 - r - sr * 0.5; sx += step) {
+        var xf2 = (sx - bw / 2) / (bw / 2), k = 1 - 0.6 * xf2 * xf2, rx = Math.max(0.6, sr * k), ry = sr * 0.92;
+        var sg2 = o.createRadialGradient(sx - rx * 0.25, mid - ry * 0.3, 0, sx, mid, Math.max(rx, ry));
+        sg2.addColorStop(0, 'rgba(255,255,255,1)'); sg2.addColorStop(0.55, c(236, 0.04)); sg2.addColorStop(1, c(160, 0.1));
+        o.beginPath(); o.ellipse(sx, mid, rx, ry, 0, 0, 7); o.fillStyle = sg2; o.fill();
+        o.lineWidth = Math.max(0.6, w * 0.05); o.strokeStyle = 'rgba(60,45,45,.55)'; o.stroke();
+        o.beginPath(); o.arc(sx - rx * 0.3, mid - ry * 0.35, Math.max(0.5, ry * 0.2), 0, 7); o.fillStyle = 'rgba(255,255,255,.95)'; o.fill();
+      }
+    }
     o.restore();
     ctx.save();                                                                                   // shadow on the skin: soft, and a thin dark line along both edges
     var curve = function (dy) { ctx.beginPath(); ctx.moveTo(-half, e + dy); ctx.quadraticCurveTo(0, -e + dy, half, e + dy); };
@@ -144,7 +176,7 @@
     curve(w * 0.55); ctx.strokeStyle = 'rgba(50,25,15,.26)'; ctx.stroke();
     ctx.restore();
     var n = bw - 4;                                                                               // the wire itself, bent so its two sides curve down round the finger
-    for (var i = 0; i < n; i++) { var xf = (i - n / 2) / (n / 2); ctx.drawImage(oc, i + 2, 0, 1, bh, -half + i * (half * 2 / n), e * xf * xf - mid, half * 2 / n + 0.6, bh); }
+    for (var i = 0; i < n; i++) { var xf = (i - n / 2) / (n / 2); var th = 1 - 0.24 * xf * xf; ctx.drawImage(oc, i + 2, 0, 1, bh, -half + i * (half * 2 / n), e * xf * xf - mid * th, half * 2 / n + 0.6, bh * th); }   // a little thinner towards the sides
   }
 
   /* ---- quick preview on the device: MediaPipe Hands finds the finger (files bundled in vendor/hands) ---- */
@@ -371,7 +403,7 @@
       var wait = new Promise(function (r) { setTimeout(r, 1500); });
       photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H;
       var found = await localPreview(); await wait;
-      setStatus(!useAI && found ? 'Your ring is placed on your finger. If it is on the wrong finger, tap the finger you want.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
+      setStatus(!useAI && found ? 'Your ring is placed on your finger.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
         (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
     }
     setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;
@@ -401,16 +433,9 @@
   /* tap to place the ring: only when no hand could be found */
   function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; }
   cv.style.touchAction = 'pan-y';
-  cv.addEventListener('click', async function (e) {                   // tap the finger: the ring moves there and fits to that finger
-    if (!photo || !placed || generating) return;
-    var hr = ring.heading * Math.PI / 180, p = pt(e), hint = { dx: Math.sin(hr), dy: -Math.cos(hr) }, fwNow = (ppm || W * 0.0095) * FINGER_MM, z = null;
-    setBusy(true, 'Fitting the ring to that finger…');
-    try { z = await zoomFit(p.x, p.y, hint, fwNow); } catch (err) { z = null; }
-    setBusy(false);
-    var rf = z || refineAt(p.x, p.y, hint);
-    if (rf && rf.fw > 0.6 * fwNow && rf.fw < 1.6 * fwNow) { ring.x = rf.x; ring.y = rf.y; ring.heading = rf.heading; ppm = rf.fw / FINGER_MM; manual = false; setStatus('Ring moved to the finger you tapped.'); }
-    else { ring.x = p.x; ring.y = p.y; manual = true; setStatus('Ring placed where you tapped. Tap the middle of the finger.'); }
-    draw();
+  cv.addEventListener('click', function (e) {                         // only when no hand could be found: tap the finger to put the ring there. Otherwise the picture never changes after generating.
+    if (!photo || !placed || generating || !manual) return;
+    var p = pt(e); ring.x = p.x; ring.y = p.y; draw();
   });
 
   $('#save').onclick = async function () {
