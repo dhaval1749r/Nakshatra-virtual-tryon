@@ -3,81 +3,169 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nakshatra Jewellers</title>
-<meta name="description" content="Nakshatra Jewellers. Silver rings with coloured stones, and a virtual try-on to see them on your hand.">
+<title>Nakshatra Jewellers · Fine Jewellers, Pune</title>
+<meta name="description" content="Nakshatra Jewellers, Pune. Silver rings with coloured stones and a virtual try-on: see a ring on your own hand before you visit.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header class="site">
-  <div class="inner bar">
-    <a class="brand" href="#top">Nakshatra Jewellers</a>
-    <nav aria-label="Sections">
-      <a href="#rings">Rings</a>
-      <a href="#tryon">Try on</a>
-    </nav>
+<header class="site" id="top">
+  <div class="bar">
+    <a class="brand" href="#top" aria-label="Nakshatra Jewellers home">
+      <span class="mono" aria-hidden="true">NJ</span>
+      <span class="bname"><b>NAKSHATRA</b><small>FINE JEWELLERS</small></span>
+    </a>
+    <button class="menubtn" id="menuBtn" type="button" aria-expanded="false" aria-controls="menu" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
+  <nav class="menu" id="menu" hidden aria-label="Sections">
+    <a href="#top">Home</a>
+    <a href="#collection">Collection</a>
+    <a href="#tryonfeature">AI Try-On</a>
+    <a href="#stylist">Chatbot</a>
+    <a href="#why">Why Choose Us</a>
+    <a href="#contact">Contact Us</a>
+  </nav>
 </header>
 
-<main id="top">
+<main>
   <section class="hero">
-    <div class="inner">
-      <h1>Rings with coloured stones, set in silver</h1>
-      <p>See a ring on your own hand before you visit the shop. Upload a photo and try it on.</p>
-      <p><a class="btn" href="#tryon">Try a ring on</a> <a class="btn line" href="#rings">See the rings</a></p>
+    <p class="eyebrow">✦ Pune · Kondhwa</p>
+    <h1>Crafted in starlight, worn with majesty</h1>
+    <p class="sub">Silver jewellery with coloured stones. Upload a photo of your hand and see each ring on your own finger before you visit the shop.</p>
+    <div class="ctas">
+      <a class="btn ghost" href="#collection">Explore Collections →</a>
+      <button class="btn gold" type="button" data-open-studio>✦ Launch Virtual Try-On</button>
+      <button class="btn gold2" type="button" data-open-chat>💬 Ask Our Assistant</button>
+    </div>
+    <div class="stats">
+      <div><b id="statCount">3</b><span>Designs</span></div>
+      <div><b>Try-On</b><span>On your photo</span></div>
+      <div><b>Pune</b><span>Kondhwa store</span></div>
     </div>
   </section>
 
-  <section id="rings" class="block">
-    <div class="inner">
-      <h2>Rings</h2>
-      <div class="grid" id="grid"></div>
+  <section id="tryonfeature" class="band light">
+    <p class="eyebrow dark">Virtual try-on</p>
+    <h2>Your personal jewellery studio</h2>
+    <div class="feature">
+      <div class="showcase" id="showcase" aria-hidden="true"></div>
+      <p class="tag">✦ Signature feature</p>
+      <h3>Virtual Try-On</h3>
+      <p>Upload a photo of the back of your hand and see our rings on you, with the true size, a natural fit and soft light and shadow. Your photo and background stay exactly as they are.</p>
+      <ul class="chips">
+        <li>📷 Use your own photo</li>
+        <li>✨ Photo-real result</li>
+        <li>⬇ Save the image</li>
+      </ul>
+      <button class="btn gold" type="button" data-open-studio>✦ Try it on me</button>
     </div>
   </section>
 
-  <section id="tryon" class="block alt">
-    <div class="inner">
-      <h2>Try a ring on</h2>
-      <p class="lead">Use a clear, well-lit photo of the back of your hand with the fingers visible.</p>
-      <div class="studio">
-        <div class="stage">
-          <canvas id="cv" width="800" height="600" aria-label="Try-on preview"></canvas>
-          <div class="busy" id="busy" hidden><div><span class="spin" aria-hidden="true"></span><p id="busyTxt"></p></div></div>
-        </div>
-        <div class="controls">
-          <div class="step">
-            <h3>1. Add your hand photo</h3>
-            <input type="file" id="file" class="file" accept="image/*">
-            <label class="btn" for="file" id="upload">Upload photo</label>
-          </div>
-          <div class="step" id="stepRing" hidden>
-            <h3>2. Choose a ring</h3>
-            <div class="picks" id="picks"></div>
-          </div>
-          <div class="step" id="stepGo" hidden>
-            <h3>3. See it on your finger</h3>
-            <button class="btn" id="generate" type="button">Generate try-on</button>
-            <button class="btn line" id="save" type="button" disabled>Save image</button>
-          </div>
-          <p class="status" id="status" role="status" aria-live="polite">Add a clear photo of the back of your hand to start.</p>
-        </div>
-      </div>
+  <section id="stylist" class="band light">
+    <div class="feature soft">
+      <p class="tag dark">💬 Assistant</p>
+      <h3>Ask our concierge</h3>
+      <p>Gifting, everyday rings, which stone suits you, how the try-on works. Ask and get a quick answer.</p>
+      <div class="bubble me">Which ring is good for daily wear?</div>
+      <div class="bubble bot">The Red Oval Halo Ring is light and easy for every day. Want to try it on?</div>
+      <button class="btn dark" type="button" data-open-chat>Start chatting →</button>
+    </div>
+  </section>
+
+  <section id="collection" class="band light">
+    <p class="eyebrow dark">The collection</p>
+    <h2>Curated rings</h2>
+    <p class="lead">Tap <b>Try-On</b> on any ring to see it on your hand.</p>
+    <div class="filters" id="filters" role="group" aria-label="Filter"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="why" class="band light">
+    <p class="eyebrow dark">Why Nakshatra</p>
+    <h2>Why choose us</h2>
+    <div class="why">
+      <article><span class="ico">✦</span><h3>Try before you buy</h3><p>See every ring on your own photo before you decide.</p></article>
+      <article><span class="ico">◆</span><h3>Handpicked designs</h3><p>Silver rings with coloured stones, chosen one by one.</p></article>
+      <article><span class="ico">☎</span><h3>Real people in the shop</h3><p>Price and availability are confirmed by the shop, never guessed.</p></article>
+    </div>
+  </section>
+
+  <section id="contact" class="visit">
+    <p class="eyebrow">Visit our store</p>
+    <h2>See it. Feel it. Make it yours.</h2>
+    <p class="lead2">Come to our Kondhwa store to see your favourite pieces in person.</p>
+    <ul class="info">
+      <li><span>📍</span><span id="stAddr"></span></li>
+      <li><span>🕘</span><span id="stHours"></span></li>
+      <li><span>📞</span><span id="stPhone"></span></li>
+    </ul>
+    <div class="actions">
+      <a class="btn wa" id="stWa" target="_blank" rel="noopener">Book a visit on WhatsApp</a>
+      <a class="btn gold" id="stCall">Call the shop</a>
+      <a class="btn ghost" id="stDir" target="_blank" rel="noopener">Directions</a>
     </div>
   </section>
 </main>
 
 <footer class="site">
-  <div class="inner">© 2026 Nakshatra Jewellers</div>
+  <div class="brand"><span class="mono" aria-hidden="true">NJ</span><span class="bname"><b>NAKSHATRA</b><small>JEWELLERS · PUNE</small></span></div>
+  <p>Silver jewellery with coloured stones. Timeless pieces for every celebration.</p>
+  <p class="copy">© 2026 Nakshatra Jewellers</p>
 </footer>
 
-<button class="chatbtn" id="chatBtn" type="button" aria-expanded="false" aria-controls="chat">Chat with us</button>
+<!-- Try-on studio -->
+<div class="studio-wrap" id="studioWrap" hidden role="dialog" aria-modal="true" aria-labelledby="studioTitle">
+  <div class="studio-head">
+    <div><h2 id="studioTitle">Virtual Try-On Studio</h2><p>Upload a photo and see the ring on you.</p></div>
+    <button type="button" id="studioClose" class="x" aria-label="Close studio">×</button>
+  </div>
+  <div class="studio-body">
+    <details class="how" open>
+      <summary>How to use · 4 easy steps</summary>
+      <ol>
+        <li><b>Add your photo.</b> Bright light, back of the hand, fingers visible.</li>
+        <li><b>Pick the ring</b> you want to wear.</li>
+        <li><b>Generate.</b> A few seconds and the ring is placed on your finger.</li>
+        <li><b>Save</b> the image to share it.</li>
+      </ol>
+    </details>
+    <div class="studio">
+      <div class="stage">
+        <canvas id="cv" width="800" height="600" aria-label="Try-on preview"></canvas>
+        <div class="busy" id="busy" hidden><div><span class="spin" aria-hidden="true"></span><p id="busyTxt"></p></div></div>
+      </div>
+      <div class="controls">
+        <div class="step">
+          <h3>Step 1 · Your photo</h3>
+          <input type="file" id="file" class="file" accept="image/*">
+          <label class="btn gold" for="file" id="upload">⬆ Upload photo</label>
+        </div>
+        <div class="step" id="stepRing" hidden>
+          <h3>Step 2 · Jewellery</h3>
+          <div class="picks" id="picks"></div>
+        </div>
+        <div class="step" id="stepGo" hidden>
+          <h3>Step 3 · See it on your finger</h3>
+          <button class="btn gold" id="generate" type="button">Generate try-on</button>
+          <button class="btn ghost" id="save" type="button" disabled>Save image</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite">Add a clear photo of the back of your hand to start.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="chatbtn" id="chatBtn" type="button" aria-expanded="false" aria-controls="chat"><span class="dot" aria-hidden="true"></span>Ask Assistant</button>
 <aside class="chat" id="chat" hidden aria-label="Chat">
   <div class="chathead"><strong>Chat with Nakshatra</strong><button type="button" id="chatClose" aria-label="Close chat">×</button></div>
   <div class="msgs" id="msgs" aria-live="polite"></div>
   <div class="faq" id="faq"></div>
   <form class="chatform" id="chatForm" hidden>
     <input type="text" id="chatIn" placeholder="Type your question" aria-label="Your question" autocomplete="off">
-    <button class="btn" type="submit" id="chatSend">Send</button>
+    <button class="btn gold" type="submit" id="chatSend">Send</button>
   </form>
 </aside>
 

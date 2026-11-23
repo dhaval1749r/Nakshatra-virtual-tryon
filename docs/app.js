@@ -6,18 +6,41 @@
   var byId = {}; P.forEach(function (p) { byId[p.id] = p; });
 
   /* ---------- shop page ---------- */
-  $('#grid').innerHTML = P.map(function (p) {
-    return '<article class="card"><img src="' + esc(p.photo) + '" alt="' + esc(p.name) + '" loading="lazy">' +
-      '<h3>' + esc(p.name) + '</h3><p class="meta">' + esc(p.material) + ' · ' + esc(p.stone) + '</p>' +
-      '<p>' + esc(p.desc) + '</p>' +
-      '<div class="row"><button class="btn" type="button" data-try="' + p.id + '">Try on</button>' +
-      '<button class="btn line" type="button" data-ask="' + p.id + '">Ask price</button></div></article>';
-  }).join('');
+  var ST = window.NAKSHATRA_STORE || {};
+  var cat = 'All';
+  function cats() { var c = ['All']; P.forEach(function (p) { var k = p.cat || 'Rings'; if (c.indexOf(k) < 0) c.push(k); }); return c; }
+  function renderGrid() {
+    $('#filters').innerHTML = cats().map(function (c) { return '<button type="button" data-cat="' + esc(c) + '" aria-pressed="' + (c === cat) + '">' + esc(c) + '</button>'; }).join('');
+    $('#grid').innerHTML = P.filter(function (p) { return cat === 'All' || (p.cat || 'Rings') === cat; }).map(function (p) {
+      return '<article class="card"><div class="ph"><img src="' + esc(p.photo) + '" alt="' + esc(p.name) + '" loading="lazy"><span class="badge">' + esc(p.cat || 'Rings') + '</span>' +
+        '<button class="tryb" type="button" data-try="' + p.id + '">✦ Try-On</button></div>' +
+        '<div class="body"><h3>' + esc(p.name) + '</h3><p class="meta">' + esc(p.material) + ' · ' + esc(p.stone) + '</p>' +
+        '<p>' + esc(p.desc) + '</p><button class="ask" type="button" data-ask="' + p.id + '">Ask price</button></div></article>';
+    }).join('');
+  }
+  renderGrid();
+  $('#filters').addEventListener('click', function (e) { var b = e.target.closest('[data-cat]'); if (b) { cat = b.dataset.cat; renderGrid(); } });
   $('#grid').addEventListener('click', function (e) {
     var t = e.target.closest('[data-try]'), a = e.target.closest('[data-ask]');
-    if (t) { choose(t.dataset.try); $('#tryon').scrollIntoView(); }
+    if (t) { openStudio(); choose(t.dataset.try); }
     if (a) { openChat(); ask('What is the price of the ' + byId[a.dataset.ask].name + '?'); }
   });
+  $('#statCount').textContent = P.length;
+  $('#showcase').innerHTML = P.slice(0, 3).map(function (p) { return '<div style="background-image:url(' + esc(p.photo) + ')"></div>'; }).join('');
+  $('#stAddr').textContent = ST.address || ''; $('#stHours').textContent = ST.hours || ''; $('#stPhone').textContent = ST.phoneShow || '';
+  $('#stCall').href = 'tel:' + (ST.phoneTel || '');
+  $('#stWa').href = 'https://wa.me/' + (ST.whatsapp || '') + '?text=' + encodeURIComponent('Hello, I would like to visit the shop.');
+  $('#stDir').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ST.mapQuery || ST.address || '');
+
+  /* menu, studio overlay */
+  $('#menuBtn').onclick = function () { var m = $('#menu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
+  $('#menu').addEventListener('click', function (e) { if (e.target.closest('a')) { $('#menu').hidden = true; $('#menuBtn').setAttribute('aria-expanded', 'false'); } });
+  function openStudio() { $('#studioWrap').hidden = false; document.body.classList.add('lock'); $('#studioWrap').scrollTop = 0; draw(); }
+  function closeStudio() { $('#studioWrap').hidden = true; document.body.classList.remove('lock'); }
+  document.querySelectorAll('[data-open-studio]').forEach(function (b) { b.addEventListener('click', openStudio); });
+  document.querySelectorAll('[data-open-chat]').forEach(function (b) { b.addEventListener('click', function () { openChat(); }); });
+  $('#studioClose').onclick = closeStudio;
+  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#studioWrap').hidden && $('#chat').hidden) closeStudio(); });
 
   /* ---------- try-on ---------- */
   var CFG = window.NAKSHATRA_TRYON || {};
@@ -467,12 +490,12 @@
   function bubble(cls, t) { var d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = t; msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d; }
   $('#faq').innerHTML = FAQ.map(function (q, i) { return '<button type="button" data-q="' + i + '">' + esc(q[0]) + '</button>'; }).join('');
   $('#faq').addEventListener('click', function (e) { var b = e.target.closest('[data-q]'); if (!b) return; var q = FAQ[+b.dataset.q]; bubble('me', q[0]); bubble('bot', q[1]); });
-  function openChat() { $('#chat').hidden = false; $('#chatBtn').hidden = true; $('#chatBtn').setAttribute('aria-expanded', 'true'); if (!msgs.children.length) bubble('bot', 'Hello! Ask me about our rings or the try-on.'); }
+  function openChat() { $('#chat').hidden = false; $('#chatBtn').hidden = true; $('#chatBtn').setAttribute('aria-expanded', 'true'); if (!msgs.children.length) bubble('bot', 'Hello! Ask me about our rings, the try-on or visiting the shop.'); }
   function closeChat() { $('#chat').hidden = true; $('#chatBtn').hidden = false; $('#chatBtn').setAttribute('aria-expanded', 'false'); }
   $('#chatBtn').onclick = openChat; $('#chatClose').onclick = closeChat;
   var RULES = 'You are the assistant of Nakshatra Jewellers, a small jewellery shop. Answer briefly in plain text, under 70 words, in the language the customer writes in (English, Hindi or Hinglish). ' +
     'The shop currently shows only these rings (all silver): ' + P.map(function (p) { return p.name + ' (' + p.stone + ')'; }).join('; ') + '. ' +
-    'The website has a virtual try-on for rings using a photo of the back of the hand. Never invent prices, offers, stock, addresses, hours or phone numbers. ' +
+    'The website has a virtual try-on for rings using a photo of the back of the hand. The shop is at: ' + (ST.address || '') + '. Phone: ' + (ST.phoneShow || '') + '. Hours: ' + (ST.hours || '') + '. Never invent prices, offers, stock or anything else not given here. ' +
     'For price, say the shop confirms the price for the day. For anything you do not know, say the shop will confirm.';
   async function ask(text) {
     bubble('me', text);

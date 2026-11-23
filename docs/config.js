@@ -7,3 +7,14 @@ window.NAKSHATRA_TRYON = {
   api: "",
   useAI: false   // false = place the real ring photo on your finger on the device (photo and background stay unchanged). true = let the AI service redraw the photo.
 };
+
+/* Shop details shown on the website. Edit here. */
+window.NAKSHATRA_STORE = {
+  name: "Nakshatra Jewellers",
+  address: "Shop No.3, Manmohan Residency, Gangadham - Shatrunjay Rd, near Shantinagar/Chordiya Residency, Anand Tirth Nagar, Kondhwa Budruk, Pune, Maharashtra 411048",
+  phoneShow: "080872 78272",
+  phoneTel: "+918087278272",
+  whatsapp: "918087278272",
+  hours: "Open daily · call to confirm timings",
+  mapQuery: "Nakshatra Jewellers Manmohan Residency Kondhwa Budruk Pune 411048"
+};
