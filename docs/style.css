@@ -218,3 +218,29 @@ footer .brand{margin-bottom:14px}
 .card .badge{display:none}
 @media (min-width:640px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}}
 @media (min-width:960px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* ---- v3: light home page with side-sliders ---- */
+.tryhero{padding-top:36px;text-align:left}
+.tryhero h1{font-size:clamp(2rem,7vw,3.4rem)}
+.kinds{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:6px 0 20px;max-width:520px}
+.kinds button{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--line);border-radius:18px;background:rgba(0,0,0,.28);color:var(--cream);font:600 1rem var(--sans);cursor:pointer;text-align:left}
+.kinds button span{font-size:1.4rem}
+.kinds button:hover{border-color:var(--gold)}
+.showcase{grid-template-columns:repeat(4,1fr);margin:26px 0 0}
+.tryhero .showcase div{aspect-ratio:3/4;background-size:cover;background-position:center}
+.track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 14px;margin:0 -18px;padding-left:18px;padding-right:18px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;max-width:none!important}
+.track>*{flex:0 0 auto;scroll-snap-align:start}
+.track>.card{width:min(46vw,210px)}
+.track>.set{width:min(78vw,340px)}
+.track .card .ph img{aspect-ratio:1/1.1}
+.sets.track{display:flex;gap:16px;margin-top:26px}
+.sets .setimg img{aspect-ratio:4/5}
+.seeall{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1px dashed var(--goldd);background:transparent!important;color:var(--goldd);font:600 1rem var(--sans);cursor:pointer;min-height:240px}
+.seeall b{font:700 2.4rem var(--serif)}
+.band.dark .seeall{color:var(--gold2);border-color:var(--gold)}
+.hint{color:var(--lmuted);font-size:.92rem;margin:0 0 10px}
+.picks.track{margin:0;padding:2px 0 10px;gap:8px}
+.picks .pick{width:92px;font-size:.74rem}
+#pickTabs{justify-content:flex-start;margin:0 0 10px}
+.set .actions{flex-direction:row;flex-wrap:wrap}
+@media (min-width:760px){.track>.card{width:230px}.track>.set{width:360px}.kinds{grid-template-columns:repeat(4,1fr);max-width:none}}

@@ -22,60 +22,46 @@
   </div>
   <nav class="menu" id="menu" hidden aria-label="Sections">
     <a href="#top">Home</a>
+    <a href="#tryon">Virtual Try-On</a>
     <a href="#ultra">Ultra Premium</a>
     <a href="#premium">Premium</a>
     <a href="#normal">Normal</a>
-    <a href="#tryonfeature">Try-On</a>
     <a href="#stylist">Chatbot</a>
     <a href="#contact">Order / Contact</a>
   </nav>
 </header>
 
 <main>
-  <section class="hero">
-    <p class="eyebrow">✦ Pune · Kondhwa</p>
-    <h1>Crafted in starlight, worn with majesty</h1>
-    <p class="sub">Silver and fine jewellery, from everyday pieces to our ultra premium statement sets. Order on WhatsApp or call the shop.</p>
+  <section class="hero tryhero" id="tryon">
+    <p class="eyebrow">✦ Virtual Try-On</p>
+    <h1>Wear it before you buy it</h1>
+    <p class="sub">Upload your photo and see our rings, earrings, bracelets and necklace sets on you, in the true size, with natural light and shadow.</p>
+    <div class="kinds" id="kinds">
+      <button type="button" data-kind="Rings"><span>💍</span>Rings</button>
+      <button type="button" data-kind="Earrings"><span>✨</span>Earrings</button>
+      <button type="button" data-kind="Bracelets"><span>⌚</span>Bracelets</button>
+      <button type="button" data-kind="Sets"><span>👑</span>Necklace sets</button>
+    </div>
     <div class="ctas">
-      <a class="btn gold" href="#ultra">✦ See Ultra Premium Sets</a>
-      <a class="btn ghost" href="#premium">Premium Collection →</a>
-      <a class="btn ghost" href="#normal">Normal Collection →</a>
+      <button class="btn gold" type="button" data-open-studio>✦ Start try-on</button>
+      <a class="btn ghost" href="#ultra">See Ultra Premium Sets →</a>
     </div>
-    <div class="stats">
-      <div><b id="statCount">70+</b><span>Designs</span></div>
-      <div><b>3</b><span>Collections</span></div>
-      <div><b>Pune</b><span>Kondhwa store</span></div>
-    </div>
+    <div class="showcase" id="showcase" aria-hidden="true"></div>
   </section>
 
   <section id="ultra" class="ultra">
     <p class="eyebrow">✦ Ultra Premium Collection</p>
     <h2>Signature statement sets</h2>
-    <p class="lead2">Our finest necklace and earring sets, made for weddings and the evenings you remember.</p>
-    <div class="sets" id="sets"></div>
+    <p class="lead2">Necklace with matching earrings, made for weddings and the evenings you remember. Try them on you.</p>
+    <div class="track sets" id="sets"></div>
   </section>
 
   <section id="premium" class="band light">
     <p class="eyebrow dark">Premium Jewellery</p>
     <h2>Premium collection</h2>
-    <p class="lead">Rings, bracelets and earrings, picked for their finish and sparkle.</p>
+    <p class="lead">Rings, bracelets and earrings with virtual try-on.</p>
     <div class="filters" id="pFilters" role="group" aria-label="Premium filter"></div>
-    <div class="grid" id="pGrid"></div>
-  </section>
-
-  <section id="tryonfeature" class="band light">
-    <div class="feature">
-      <div class="showcase" id="showcase" aria-hidden="true"></div>
-      <p class="tag">✦ Virtual Try-On</p>
-      <h3>See it on you</h3>
-      <p>Upload a photo of your hand and see our rings on your own finger, in the true size with natural light and shadow. Your photo and background stay exactly as they are.</p>
-      <ul class="chips">
-        <li>📷 Use your own photo</li>
-        <li>✨ Photo-real result</li>
-        <li>⬇ Save the image</li>
-      </ul>
-      <button class="btn gold" type="button" data-open-studio>✦ Try it on me</button>
-    </div>
+    <div class="track" id="pTrack"></div>
   </section>
 
   <section id="normal" class="band dark">
@@ -83,8 +69,7 @@
     <h2>Normal collection</h2>
     <p class="lead2 c">Rings, chains, earrings, kadas and necklaces for every day.</p>
     <div class="filters dk" id="nFilters" role="group" aria-label="Collection filter"></div>
-    <div class="grid" id="nGrid"></div>
-    <p class="more"><button class="btn ghost" type="button" id="nMore">Show more</button></p>
+    <div class="track" id="nTrack"></div>
   </section>
 
   <section id="stylist" class="band light">
@@ -95,16 +80,6 @@
       <div class="bubble me">Shaadi ke liye kuch bataiye</div>
       <div class="bubble bot">Hamare Ultra Premium Sets dekhiye. Chahe to main aapko Set 02 aur Set 03 dikha deta hu.</div>
       <button class="btn dark" type="button" data-open-chat>Start chatting →</button>
-    </div>
-  </section>
-
-  <section id="why" class="band light">
-    <p class="eyebrow dark">Why Nakshatra</p>
-    <h2>Why choose us</h2>
-    <div class="why">
-      <article><span class="ico">✦</span><h3>Three collections</h3><p>Normal, Premium and Ultra Premium, so there is a piece for every budget and occasion.</p></article>
-      <article><span class="ico">◆</span><h3>Easy ordering</h3><p>Tap Order on any piece and WhatsApp opens with the piece already named. Or call the shop.</p></article>
-      <article><span class="ico">☎</span><h3>Real people in the shop</h3><p>Price and availability are confirmed by the shop, never guessed.</p></article>
     </div>
   </section>
 
@@ -124,6 +99,19 @@
     </div>
   </section>
 </main>
+
+<!-- Full collection -->
+<div class="studio-wrap" id="colWrap" hidden role="dialog" aria-modal="true" aria-labelledby="colTitle">
+  <div class="studio-head">
+    <div><h2 id="colTitle">Collection</h2><p id="colSub"></p></div>
+    <button type="button" id="colClose" class="x" aria-label="Close collection">×</button>
+  </div>
+  <div class="studio-body">
+    <div class="filters dk" id="colFilters" role="group" aria-label="Filter"></div>
+    <div class="grid" id="colGrid"></div>
+    <p class="more"><button class="btn ghost" type="button" id="colMore">Show more</button></p>
+  </div>
+</div>
 
 <footer class="site">
   <div class="brand"><span class="mono" aria-hidden="true">NJ</span><span class="bname"><b>NAKSHATRA</b><small>JEWELLERS · PUNE</small></span></div>
@@ -159,9 +147,9 @@
     <details class="how" open>
       <summary>How to use · 4 easy steps</summary>
       <ol>
-        <li><b>Add your photo.</b> Bright light, back of the hand, fingers visible.</li>
-        <li><b>Pick the ring</b> you want to wear.</li>
-        <li><b>Generate.</b> A few seconds and the ring is placed on your finger.</li>
+        <li><b>Choose a piece.</b> Rings, earrings, bracelets or a necklace set.</li>
+        <li><b>Add your photo.</b> Bright light. Rings: back of your hand. Earrings and sets: your face and neck. Bracelets: your hand and wrist.</li>
+        <li><b>Generate.</b> A few seconds and the piece is placed on you.</li>
         <li><b>Save</b> the image to share it.</li>
       </ol>
     </details>
@@ -172,20 +160,22 @@
       </div>
       <div class="controls">
         <div class="step">
-          <h3>Step 1 · Your photo</h3>
+          <h3>Step 1 · Choose a piece</h3>
+          <div class="filters dk" id="pickTabs" role="group" aria-label="Type"></div>
+          <div class="track picks" id="picks"></div>
+        </div>
+        <div class="step">
+          <h3>Step 2 · Your photo</h3>
+          <p class="hint" id="photoHint">Choose a piece first.</p>
           <input type="file" id="file" class="file" accept="image/*">
           <label class="btn gold" for="file" id="upload">⬆ Upload photo</label>
         </div>
-        <div class="step" id="stepRing" hidden>
-          <h3>Step 2 · Jewellery</h3>
-          <div class="picks" id="picks"></div>
-        </div>
         <div class="step" id="stepGo" hidden>
-          <h3>Step 3 · See it on your finger</h3>
+          <h3>Step 3 · See it on you</h3>
           <button class="btn gold" id="generate" type="button">Generate try-on</button>
           <button class="btn ghost" id="save" type="button" disabled>Save image</button>
         </div>
-        <p class="status" id="status" role="status" aria-live="polite">Add a clear photo of the back of your hand to start.</p>
+        <p class="status" id="status" role="status" aria-live="polite">Pick a piece and add a clear photo to start.</p>
       </div>
     </div>
   </div>
@@ -205,6 +195,8 @@
 <script src="config.js"></script>
 <script src="products.js"></script>
 <script src="catalog.js"></script>
+<script src="tryon-data.js"></script>
+<script src="tryon2.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

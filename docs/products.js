@@ -1,34 +1,12 @@
-/* Edit this list to add, rename or remove rings.
+/* Rings that have a virtual try-on.
    photo   = picture shown on the shop page
-   cut     = same ring with the background removed (finger pointing up), used by the try-on
-   cw, ch  = pixel size of the cut-out picture
-   widthMm = width of the ring across the finger, in millimetres (measure the real ring) */
+   cut     = the ring with the background removed (front view, finger runs up the page), used by the try-on
+   cw, ch  = pixel size of the cut-out
+   widthMm = width of the ring across the finger in millimetres (estimate: measure the real ring and edit)
+   noband  = true when the cut-out already contains the whole visible band */
 window.PRODUCTS = [
-  {
-    id: "ring-1",
-    name: "Green Stone Cluster Ring",
-    material: "Silver",
-    stone: "Green stones with white stone halo",
-    desc: "A bold square cluster ring with nine green stones inside a double halo of white stones.",
-    photo: "images/ring-1.jpg",
-    cut: "images/ring-1-cut.png", cw: 370, ch: 434, widthMm: 13
-  },
-  {
-    id: "ring-2",
-    name: "Blue Pear Halo Ring",
-    material: "Silver",
-    stone: "Blue pear-cut stone with white stone halo",
-    desc: "A pear-cut blue stone surrounded by a halo of small white stones, on a stone-set band.",
-    photo: "images/ring-2.jpg",
-    cut: "images/ring-2-cut.png", cw: 426, ch: 544, widthMm: 11, rot: 9, pave: true
-  },
-  {
-    id: "ring-3",
-    name: "Red Oval Halo Ring",
-    material: "Silver",
-    stone: "Red oval stone with white stone halo",
-    desc: "A classic red oval stone ringed by white stones. Easy to wear every day.",
-    photo: "images/ring-3.jpg",
-    cut: "images/ring-3-cut.png", cw: 254, ch: 270, widthMm: 9.5
-  }
+  { id: "pre-rings-01", name: "Ring 01", photo: "images/catalog/pre-rings-01.jpg", cut: "images/tryon/r01.png", cw: 467, ch: 206, widthMm: 21, noband: true },
+  { id: "pre-rings-02", name: "Ring 02", photo: "images/catalog/pre-rings-02.jpg", cut: "images/tryon/r02.png", cw: 391, ch: 194, widthMm: 17, noband: true },
+  { id: "pre-rings-06", name: "Ring 06", photo: "images/catalog/pre-rings-06.jpg", cut: "images/tryon/r06.png", cw: 468, ch: 168, widthMm: 20, noband: true },
+  { id: "pre-rings-08", name: "Ring 08", photo: "images/catalog/pre-rings-08.jpg", cut: "images/tryon/r08.png", cw: 475, ch: 197, widthMm: 19, noband: true }
 ];

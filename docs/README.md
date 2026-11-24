@@ -1,6 +1,6 @@
 # Nakshatra Jewellers: simple website
 
-A plain website with three rings, a try-on for rings, and a small chat box.
+Nakshatra Jewellers website: three collections (Normal, Premium, Ultra Premium), virtual try-on for 20 pieces (4 rings, 4 earrings, 8 bracelets, 4 necklace sets), WhatsApp/call ordering and a small chat box.
 No build step and no framework. Open `index.html` through any web server.
 
 ## Files
@@ -38,3 +38,11 @@ A clearer, larger photo of each ring on a plain white background in `images/` wi
 ## Put it online with GitHub Pages
 In the repository: Settings, Pages, Source "Deploy from a branch", branch `simple-site`, folder `/docs`, Save.
 The site opens at `https://<your-user>.github.io/<repository>/`. The AI try-on and the hand finder both work there.
+
+
+## Collections and try-on (v3)
+- `catalog.js`: all 70 pieces (tier normal / premium / ultra). Photos are in `images/catalog/`.
+- `products.js`: rings with try-on (cut-outs in `images/tryon/`, `widthMm` = real ring width, an estimate).
+- `tryon-data.js`: settings for earrings, bracelets and sets (real sizes in mm are estimates, edit them).
+- `tryon2.js`: earrings, necklace sets and bracelets. Face and hand finding use MediaPipe (`vendor/face_mesh`, `vendor/hands`) in the browser, so it is free and unlimited.
+- Try-on is only for Premium and Ultra Premium pieces; Normal pieces have no try-on.
