@@ -176,7 +176,7 @@
     if (overlay) { overlay.draw(ctx); return; }
     var img = cuts[sel.id];
     if (selKind !== 'ring' || !placed || !img || !img.complete) return;
-    var mm = ppm || W * 0.0095, s = sel.widthMm * mm / sel.cw;
+    var mm = ppm || W * 0.0095, wmm = Math.min(sel.widthMm * 0.88, FINGER_MM * 1.08), s = wmm * mm / sel.cw;   // never wider than the finger it wraps
     var rad = ring.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // direction along the finger, towards the tip
     var sk = skinAround(ring.x, ring.y, ux, uy, FINGER_MM * mm * 0.9);                // skin colour and light of this photo
     cv.setAttribute('data-ring', [Math.round(ring.x), Math.round(ring.y), Math.round(ring.heading), (FINGER_MM * mm).toFixed(1)].join(','));   // x, y, rotation, finger width in pixels
@@ -193,7 +193,8 @@
     ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97)';
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
-    ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);   // a little skin colour reflected in the silver
+    ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);
+    var eg = ox.createLinearGradient(0, 0, pw, 0); eg.addColorStop(0, 'rgba(30,14,8,.42)'); eg.addColorStop(0.16, 'rgba(30,14,8,0)'); eg.addColorStop(0.84, 'rgba(30,14,8,0)'); eg.addColorStop(1, 'rgba(30,14,8,.42)'); ox.fillStyle = eg; ox.fillRect(0, 0, pw, ph);   // the ring curves away at both sides of the finger   // a little skin colour reflected in the silver
     ctx.shadowColor = 'rgba(15,6,3,.22)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;      // small tight shadow where the setting touches the skin
     ctx.drawImage(oc, -pw / 2, -ph / 2);
     ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
@@ -397,7 +398,7 @@
     if (shift > 0.7 * fwEst) { mx = cx + (mx - cx) * 0.7 * fwEst / shift; my = cy + (my - cy) * 0.7 * fwEst / shift; }
     if (okPt(r.web)) {                                                       // a ring sits just above the knuckle web: put it there
       var wx = x0 + r.web.x * S, wy = y0 + r.web.y * S, al = (wx - mx) * vx + (wy - my) * vy;   // web position along the finger, from the middle point
-      var px = mx + vx * al, py = my + vy * al, tx = px + vx * 0.8 * wpx, ty = py + vy * 0.8 * wpx;   // on the finger's middle line, 0.8 finger-widths above the web
+      var px = mx + vx * al, py = my + vy * al, tx = px + vx * 0.62 * wpx, ty = py + vy * 0.62 * wpx;   // on the finger's middle line, 0.8 finger-widths above the web
       if (al < 0 && Math.hypot(tx - mx, ty - my) < 2.4 * wpx) { mx = tx; my = ty; }
     }
     return { x: mx, y: my, heading: Math.atan2(vx, -vy) * 180 / Math.PI, fw: wpx };
