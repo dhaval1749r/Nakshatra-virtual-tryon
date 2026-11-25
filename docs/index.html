@@ -144,7 +144,7 @@
 <!-- Try-on studio -->
 <div class="studio-wrap" id="studioWrap" hidden role="dialog" aria-modal="true" aria-labelledby="studioTitle">
   <div class="studio-head">
-    <div><h2 id="studioTitle">Virtual Try-On Studio</h2><p>Upload a photo and see the ring on you.</p></div>
+    <div><h2 id="studioTitle">Virtual Try-On Studio</h2><p>Add a photo and see the piece on you.</p></div>
     <button type="button" id="studioClose" class="x" aria-label="Close studio">×</button>
   </div>
   <div class="studio-body">
@@ -154,34 +154,55 @@
         <li><b>Choose a piece.</b> Rings, earrings, bracelets or a necklace set.</li>
         <li><b>Add your photo.</b> Bright light. Rings: back of your hand. Earrings and sets: your face and neck. Bracelets: your hand and wrist.</li>
         <li><b>Generate.</b> A few seconds and the piece is placed on you.</li>
-        <li><b>Save</b> the image to share it.</li>
+        <li><b>Download</b> the photo or share it on WhatsApp.</li>
       </ol>
     </details>
-    <div class="studio">
-      <div class="stage">
-        <canvas id="cv" width="800" height="600" aria-label="Try-on preview"></canvas>
-        <div class="busy" id="busy" hidden><div><span class="spin" aria-hidden="true"></span><p id="busyTxt"></p></div></div>
+    <div class="studio one">
+      <div class="step">
+        <h3>Step 1 · Choose a piece</h3>
+        <div class="filters dk" id="pickTabs" role="group" aria-label="Type"></div>
+        <div class="track picks" id="picks"></div>
       </div>
-      <div class="controls">
-        <div class="step">
-          <h3>Step 1 · Choose a piece</h3>
-          <div class="filters dk" id="pickTabs" role="group" aria-label="Type"></div>
-          <div class="track picks" id="picks"></div>
-        </div>
-        <div class="step">
-          <h3>Step 2 · Your photo</h3>
-          <p class="hint" id="photoHint">Choose a piece first.</p>
-          <input type="file" id="file" class="file" accept="image/*">
+      <div class="step">
+        <h3>Step 2 · Your photo</h3>
+        <p class="hint" id="photoHint">Choose a piece first.</p>
+        <div class="srcbox" id="srcBox" hidden><img id="srcPrev" alt="Your photo"></div>
+        <input type="file" id="file" class="file" accept="image/*">
+        <input type="file" id="fileCam" class="file" accept="image/*" capture="environment">
+        <div class="photobtns">
           <label class="btn gold" for="file" id="upload">⬆ Upload photo</label>
+          <button class="btn ghost" type="button" id="camBtn">📷 Take photo</button>
         </div>
-        <div class="step" id="stepGo" hidden>
-          <h3>Step 3 · See it on you</h3>
-          <button class="btn gold" id="generate" type="button">Generate try-on</button>
-          <button class="btn ghost" id="save" type="button" disabled>Save image</button>
+      </div>
+      <div class="step" id="stepGo" hidden>
+        <h3>Step 3 · See it on you</h3>
+        <button class="btn gold tryglow" id="generate" type="button">✦ Generate try-on</button>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite">Pick a piece and add a clear photo to start.</p>
+      <div class="step resultbox" id="resultBox" hidden>
+        <h3>Your try-on</h3>
+        <div class="stage">
+          <canvas id="cv" width="800" height="600" aria-label="Try-on result"></canvas>
+          <div class="busy" id="busy" hidden><div><span class="spin" aria-hidden="true"></span><p id="busyTxt"></p></div></div>
         </div>
-        <p class="status" id="status" role="status" aria-live="polite">Pick a piece and add a clear photo to start.</p>
+        <div class="resultbtns">
+          <button class="btn ghost" id="retry" type="button">↻ Retry</button>
+          <button class="btn gold" id="save" type="button" disabled>⬇ Download</button>
+          <button class="btn wa" id="shareWa" type="button" disabled>Share on WhatsApp</button>
+        </div>
+        <p class="hint">Each photo carries a small Nakshatra Jewellers mark.</p>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="studio-wrap camwrap" id="camWrap" hidden role="dialog" aria-modal="true" aria-label="Camera">
+  <video id="camVideo" playsinline autoplay muted></video>
+  <div class="camhint" id="camHint"></div>
+  <div class="cambar">
+    <button class="btn ghost" type="button" id="camClose">Close</button>
+    <button class="camshot" type="button" id="camShot" aria-label="Take photo"></button>
+    <button class="btn ghost" type="button" id="camFlip">Flip</button>
   </div>
 </div>
 

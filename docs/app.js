@@ -133,7 +133,7 @@
     renderPicks();
     $('#photoHint').textContent = HINT[k];
     overlay = null; placed = false; manual = false; openUrl = null;
-    $('#generate').textContent = 'Generate try-on';
+    $('#generate').textContent = '✦ Generate try-on';
     if (photo) { draw(); setStatus((it ? it.name : 'Piece') + ' selected. Press Generate try-on.'); $('#stepGo').hidden = false; }
     else setStatus((it ? it.name : 'Piece') + ' selected. Now add your photo.');
     saveState();
@@ -160,7 +160,19 @@
     return (metalCache[id] = res);
   }
 
-  function draw() {
+  var wmOn = false;
+  function draw() { drawBase(); if (photo && wmOn) watermark(); }
+  function watermark() {
+    var f = Math.max(13, Math.round(Math.min(W, H) * 0.03)), pad = Math.round(f * 0.7);
+    ctx.save(); ctx.font = '600 ' + f + 'px Cinzel, Georgia, serif'; ctx.textBaseline = 'middle';
+    var t = 'NAKSHATRA JEWELLERS', tw = ctx.measureText(t).width, r = f * 0.95, bw = r * 2 + f * 0.6 + tw + f * 0.9, bh = r * 2 + f * 0.3, x = W - pad - bw, y = H - pad - bh;
+    ctx.globalAlpha = 0.82; ctx.fillStyle = 'rgba(18,10,5,.62)'; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, bw, bh, bh / 2); else ctx.rect(x, y, bw, bh); ctx.fill();
+    ctx.globalAlpha = 0.95; ctx.strokeStyle = '#e6c968'; ctx.lineWidth = Math.max(1, f * 0.07); ctx.beginPath(); ctx.arc(x + f * 0.15 + r, y + bh / 2, r, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#e6c968'; ctx.textAlign = 'center'; ctx.font = '700 ' + Math.round(f * 0.78) + 'px Cinzel, Georgia, serif'; ctx.fillText('NJ', x + f * 0.15 + r, y + bh / 2 + 1);
+    ctx.textAlign = 'left'; ctx.font = '600 ' + f + 'px Cinzel, Georgia, serif'; ctx.fillStyle = '#f6e7bd'; ctx.fillText(t, x + f * 0.15 + r * 2 + f * 0.5, y + bh / 2 + 1);
+    ctx.restore();
+  }
+  function drawBase() {
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (!photo) {
       ctx.fillStyle = '#f7f5f0'; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -172,7 +184,7 @@
     if (overlay) { overlay.draw(ctx); return; }
     var img = cuts[sel.id];
     if (selKind !== 'ring' || !placed || !img || !img.complete) return;
-    var mm = ppm || W * 0.0095, wmm = Math.min(sel.widthMm * 0.88, FINGER_MM * 1.08), s = wmm * mm / sel.cw;   // never wider than the finger it wraps
+    var mm = ppm || W * 0.0095, wmm = Math.min(sel.widthMm * 0.95, FINGER_MM * 1.06), s = wmm * mm / sel.cw;   // never wider than the finger it wraps
     var rad = ring.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad);   // direction along the finger, towards the tip
     var sk = skinAround(ring.x, ring.y, ux, uy, FINGER_MM * mm * 0.9);                // skin colour and light of this photo
     cv.setAttribute('data-ring', [Math.round(ring.x), Math.round(ring.y), Math.round(ring.heading), (FINGER_MM * mm).toFixed(1)].join(','));   // x, y, rotation, finger width in pixels
@@ -421,6 +433,18 @@
     }
     return { x: mx, y: my, heading: Math.atan2(vx, -vy) * 180 / Math.PI, fw: wpx };
   }
+  /* measure the finger under a point and put the ring where it really sits: on the middle line, just above the knuckle web */
+  function fitToFinger(x, y, hint, fwEst, lo, hi, webPt) {
+    var rf = refineAt(x, y, hint, fwEst);
+    if (!rf || rf.fw < lo * fwEst || rf.fw > hi * fwEst) return null;
+    cv.setAttribute('data-fit', [Math.round(rf.x), Math.round(rf.y), Math.round(rf.heading), Math.round(rf.fw)].join(','));
+    var rad = rf.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad), px = rf.x, py = rf.y;
+    if (webPt) {                                                              // the web (where the finger joins the hand) is known: the ring sits 0.75 finger-widths above it, on the middle line
+      var al = (webPt.x - rf.x) * ux + (webPt.y - rf.y) * uy, d = al + 0.75 * rf.fw;
+      if (Math.abs(d) < 3 * rf.fw) { px += ux * d; py += uy * d; }
+    }
+    return { x: px, y: py, heading: rf.heading, fw: rf.fw };
+  }
   async function localPreview() {
     placed = false; manual = false; hand = null;
     try { hand = await detect(); } catch (err) { hand = null; }
@@ -432,12 +456,8 @@
       cv.setAttribute('data-lm', [5,9,13,14,17].map(function (i) { return Math.round(hand.lm[i].x * W) + ':' + Math.round(hand.lm[i].y * H); }).join(' '));
       ppm = hand.palm / 74;   // index knuckle to little-finger knuckle is about 68 mm
       var hx = Math.sin(ring.heading * Math.PI / 180), hy = -Math.cos(ring.heading * Math.PI / 180);
-      var rf = refineAt(ring.x, ring.y, { dx: hx, dy: hy }, FINGER_MM * ppm);           // measure the real finger in this photo: its width and its middle line
-      if (rf && rf.fw > 0.72 * FINGER_MM * ppm && rf.fw < 1.45 * FINGER_MM * ppm) {
-        ppm = Math.sqrt(ppm * rf.fw / FINGER_MM);                                       // between the hand-size estimate and the measured width
-        var off = (rf.x - ring.x) * -hy + (rf.y - ring.y) * hx;                          // sideways distance to the middle line of the finger
-        ring.x += -hy * off; ring.y += hx * off;
-      }
+      var fit = fitToFinger(ring.x, ring.y, { dx: hx, dy: hy }, FINGER_MM * ppm, 0.7, 1.45);   // measure the real finger in this photo: width, middle line and where it joins the hand
+      if (fit) { ring.x = fit.x; ring.y = fit.y; ring.heading = fit.heading; ppm = fit.fw * 1.08 / FINGER_MM; }
       placed = true;
     } else {
       var cl = null;
@@ -451,6 +471,10 @@
           var z = await zoomFit(ring.x, ring.y, { dx: tdx / tl, dy: tdy / tl }, cl.width * W);
           if (z) { ring.x = z.x; ring.y = z.y; ring.heading = z.heading; ppm = z.fw / FINGER_MM; }
         } catch (err) { /* keep the first estimate */ }
+        // the finger is measured from the pixels of the photo itself, starting a little further up the finger where it is clean
+        var sx = (cl.base.x + 0.3 * (cl.tip.x - cl.base.x)) * W, sy = (cl.base.y + 0.3 * (cl.tip.y - cl.base.y)) * H, hrad = ring.heading * Math.PI / 180;
+        var fit2 = fitToFinger(sx, sy, { dx: Math.sin(hrad), dy: -Math.cos(hrad) }, ppm * FINGER_MM, 0.5, 2.3, { x: cl.base.x * W, y: cl.base.y * H });
+        if (fit2) { ring.x = fit2.x; ring.y = fit2.y; ring.heading = fit2.heading; ppm = fit2.fw * 1.08 / FINGER_MM; }
         placed = true; hand = { viaClaude: true };
       } else { ring.x = W / 2; ring.y = H / 2; ring.heading = 0; ppm = 0; placed = true; manual = true; }
     }
@@ -517,12 +541,14 @@
     var wait = new Promise(function (r) { setTimeout(r, 1500); });
     try { overlay = await window.NJTry.run(selId, photo, W, H, photoBlob); } catch (e) { err = e; overlay = null; }
     await wait; draw();
-    setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again';
+    setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = '✦ Generate try-on';
     if (err) setStatus(err.message && !/^(image |load |timeout|no try)/.test(err.message) ? err.message : 'Sorry, I could not place this piece on that photo. Please try a clearer photo.', true);
-    else { setStatus('Your try-on is ready. Colours can look slightly different on screen.'); $('#save').disabled = false; }
+    else { setStatus('Your try-on is ready. Colours can look slightly different on screen.'); $('#save').disabled = false; $('#shareWa').disabled = false; }
   }
   async function generate() {
     if (!photo || generating) return;
+    wmOn = true; $('#resultBox').hidden = false; $('#shareWa').disabled = true;
+    setTimeout(function () { $('#resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 80);
     if (selKind !== 'ring') return generateOther();
     generating = true; $('#generate').disabled = true; $('#save').disabled = true; openUrl = null;
     if (originalPhoto) { photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; }
@@ -550,7 +576,7 @@
       setStatus(!useAI && found ? 'Your ring is placed on your finger.' : (useAI ? 'The AI service is busy or not reachable right now, so this is a quick preview made on your device. Try again later for the AI version. ' : (inClaude ? 'Quick preview. The full AI try-on runs on the live website. ' : 'This is a quick preview made on your device. ')) +
         (found ? '' : 'No hand was found, so tap the photo where the ring should go.'), !found);
     }
-    setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = 'Generate again'; $('#save').disabled = false;
+    setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = '✦ Generate try-on'; $('#save').disabled = false; $('#shareWa').disabled = false;
   }
   $('#generate').onclick = generate;
 
@@ -559,8 +585,8 @@
   function saveState() { SS.set('nj_state', JSON.stringify({ studio: !$('#studioWrap').hidden, id: selId, cat: pickCat })); }
   $('#upload').addEventListener('click', saveState);
   $('#file').addEventListener('click', saveState);
-  $('#file').onchange = async function (e) {
-    var f = e.target.files && e.target.files[0]; if (!f) return;
+  async function loadFile(f, inputEl) {
+    if (!f) return;
     try {
       var bmp = await new Promise(function (res, rej) { var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('image')); }; im.src = u; });
       var sc = Math.min(1, 2400 / Math.max(bmp.naturalWidth, bmp.naturalHeight), 1500 / Math.min(bmp.naturalWidth, bmp.naturalHeight));   // keep the photo sharp
@@ -572,13 +598,17 @@
       photoBlob = await toBlob(sm, 'image/jpeg', 0.9);
       try { SS.set('nj_photo', sm.toDataURL('image/jpeg', 0.82)); } catch (er2) { /* too big to keep */ }
     } catch (err) { setStatus('That file could not be opened as a picture. Please use a JPG or PNG photo.', true); return; }
-    e.target.value = ''; saveState();
+    if (inputEl) inputEl.value = ''; saveState();
     placed = false; manual = false; hand = null; ppm = 0; openUrl = null; overlay = null;
-    overlay = null; $('#stepGo').hidden = !selId; $('#save').disabled = true; $('#generate').textContent = 'Generate try-on';
-    draw();
+    wmOn = false; $('#resultBox').hidden = true; $('#shareWa').disabled = true;
+    try { $('#srcPrev').src = SS.get('nj_photo') || originalPhoto.toDataURL('image/jpeg', 0.85); } catch (er3) { /* no preview */ } $('#srcBox').hidden = false;
+    overlay = null; $('#stepGo').hidden = !selId; $('#save').disabled = true; $('#generate').textContent = '✦ Generate try-on';
     setStatus(selId ? 'Photo added. Press Generate try-on.' : 'Photo added. Now choose a piece.');
     $('#stepGo').scrollIntoView({ block: 'nearest' });
-  };
+  }
+  $('#file').onchange = function (e) { loadFile(e.target.files && e.target.files[0], e.target); };
+  $('#fileCam').onchange = function (e) { loadFile(e.target.files && e.target.files[0], e.target); };
+
 
   /* tap to place the ring: only when no hand could be found */
   function pt(e) { var r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; }
@@ -588,15 +618,55 @@
     var p = pt(e); ring.x = p.x; ring.y = p.y; draw();
   });
 
-  $('#save').onclick = async function () {
-    if (openUrl) { window.open(openUrl, '_blank'); return; }
-    var blob = await toBlob(cv, 'image/png');
-    if (!blob) { setStatus('Could not create the image.', true); return; }
+  var lastName = function () { return ((catItem[selId] || {}).name || 'try-on').replace(/[^A-Za-z0-9]+/g, '-'); };
+  async function resultBlob() { return toBlob(cv, 'image/jpeg', 0.93); }
+  async function saveBlob(blob, fname) {
     try {
       var d = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-      if (d) { await d.save({ filename: 'nakshatra-try-on.png', data: blob }); return; }
+      if (d) { await d.save({ filename: fname, data: blob }); return; }
     } catch (err) { if (err && err.code === 'declined') return; }
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nakshatra-try-on.png'; a.click();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+  }
+  $('#save').onclick = async function () {
+    var blob = await resultBlob();
+    if (!blob) { setStatus('Could not create the image.', true); return; }
+    saveBlob(blob, 'nakshatra-' + lastName() + '.jpg');
+  };
+  $('#retry').onclick = function () { generate(); };
+  $('#shareWa').onclick = async function () {
+    var blob = await resultBlob(); if (!blob) { setStatus('Could not create the image.', true); return; }
+    var name = (catItem[selId] || {}).name || 'jewellery', text = 'I tried on ' + name + ' at Nakshatra Jewellers, Pune. Order or ask: https://wa.me/' + ST.whatsapp;
+    var file = null; try { file = new File([blob], 'nakshatra-' + lastName() + '.jpg', { type: 'image/jpeg' }); } catch (e) { /* old browser */ }
+    try { if (file && navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: text, title: 'Nakshatra Jewellers' }); return; } } catch (err) { if (err && err.name === 'AbortError') return; }
+    saveBlob(blob, 'nakshatra-' + lastName() + '.jpg');                                  // no file sharing here: save the picture, then open WhatsApp with the message
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    setStatus('The picture is saved. Attach it in WhatsApp to share.');
+  };
+
+  /* camera: live view in the page; if the browser will not give it, the phone's own camera app opens instead */
+  var camStream = null, camFacing = 'user';
+  function camStop() { if (camStream) { camStream.getTracks().forEach(function (t) { t.stop(); }); camStream = null; } $('#camWrap').hidden = true; }
+  async function camStart() {
+    var v = $('#camVideo');
+    if (camStream) camStream.getTracks().forEach(function (t) { t.stop(); });
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: camFacing, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    v.srcObject = camStream; v.style.transform = camFacing === 'user' ? 'scaleX(-1)' : ''; await v.play().catch(function () {});
+  }
+  $('#camBtn').onclick = async function () {
+    saveState();
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { $('#fileCam').click(); return; }
+    camFacing = /ring|bracelet|kada/i.test((catItem[selId] || {}).cat || '') ? 'environment' : 'user';
+    $('#camHint').textContent = camFacing === 'user' ? 'Keep your face and neck in the frame, in good light.' : 'Show the back of your hand, fingers straight, in good light.';
+    try { $('#camWrap').hidden = false; await camStart(); } catch (err) { camStop(); $('#fileCam').click(); }
+  };
+  $('#camFlip').onclick = async function () { camFacing = camFacing === 'user' ? 'environment' : 'user'; try { await camStart(); } catch (err) { /* keep current */ } };
+  $('#camClose').onclick = camStop;
+  $('#camShot').onclick = function () {
+    var v = $('#camVideo'); if (!v.videoWidth) return;
+    var c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; var x = c.getContext('2d');
+    if (camFacing === 'user') { x.translate(c.width, 0); x.scale(-1, 1); }
+    x.drawImage(v, 0, 0);
+    c.toBlob(function (b) { camStop(); if (b) loadFile(new File([b], 'camera.jpg', { type: 'image/jpeg' }), null); }, 'image/jpeg', 0.95);
   };
   draw();
 
@@ -700,6 +770,7 @@
       var off = document.createElement('canvas'); W = off.width = im.naturalWidth; H = off.height = im.naturalHeight; off.getContext('2d').drawImage(im, 0, 0);
       photo = originalPhoto = off; cv.width = W; cv.height = H;
       off.toBlob(function (b) { photoBlob = b; }, 'image/jpeg', 0.9);
+      try { $('#srcPrev').src = off.toDataURL('image/jpeg', 0.85); $('#srcBox').hidden = false; } catch (e4) { /* no preview */ }
       $('#stepGo').hidden = !selId; draw(); setStatus(selId ? 'Your photo is back. Press Generate try-on.' : 'Your photo is back. Choose a piece.');
     };
     im.src = ph;
