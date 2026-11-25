@@ -26,8 +26,9 @@
   var faceLib = null, faceResolve = null;
   async function getFace() {
     if (faceLib) return faceLib;
+    await window.njPrep('vendor/face_mesh/', ['face_mesh_solution_packed_assets.data', 'face_mesh.binarypb']);
     await loadScript('vendor/face_mesh/face_mesh.js');
-    var f = new window.FaceMesh({ locateFile: function (n) { return 'vendor/face_mesh/' + n; } });
+    var f = new window.FaceMesh({ locateFile: function (n) { return window.njLoc('vendor/face_mesh/', n); } });
     f.setOptions({ maxNumFaces: 1, refineLandmarks: false, minDetectionConfidence: 0.3, minTrackingConfidence: 0.3 });
     f.onResults(function (r) { if (faceResolve) { var g = faceResolve; faceResolve = null; g(r); } });
     await f.initialize(); faceLib = f; return f;
@@ -150,8 +151,9 @@
   var handLib = null, handResolve = null;
   async function getHand() {
     if (handLib) return handLib;
+    await window.njPrep('vendor/hands/', ['hands_solution_packed_assets.data', 'hand_landmark_full.tflite', 'hands.binarypb']);
     await loadScript('vendor/hands/hands.js');
-    var h = new window.Hands({ locateFile: function (n) { return 'vendor/hands/' + n; } });
+    var h = new window.Hands({ locateFile: function (n) { return window.njLoc('vendor/hands/', n); } });
     h.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.25, minTrackingConfidence: 0.25 });
     h.onResults(function (r) { if (handResolve) { var g = handResolve; handResolve = null; g(r); } });
     await h.initialize(); handLib = h; return h;
@@ -225,7 +227,44 @@
     };
   }
 
-  var KINDS = { earring: earrings, set: necklace, necklace: necklace, bracelet: bracelet };
+  /* ---------- chains: the chain texture from the photo is laid along a curve round the neck ---------- */
+  async function chain(item, cfg, photo, W, H, blob) {
+    var face = await findFace(photo, blob, W, H);
+    if (!face) throw new Error('I could not find your face. Please use a photo showing your face and neck clearly.');
+    var img = await loadImg(cfg.file), tw = img.naturalWidth, th = img.naturalHeight, sctx = photo.getContext('2d');
+    var pxmm = face.fw / 142, cx = (face.chin.x + (face.lobeL.x + face.lobeR.x) / 2) / 2;
+    var a = 0.33 * face.fw, yTop = face.chin.y + 0.3 * face.fw, front = cfg.lenMm * pxmm * 0.4;
+    function arc(sag, n) { var L = 0, px = -a, py = 0; for (var i = 1; i <= n; i++) { var x = -a + 2 * a * i / n, y = sag * (1 - (x / a) * (x / a)); L += Math.hypot(x - px, y - py); px = x; py = y; } return L; }
+    var lo = 0, hi = 3 * face.fw; for (var k = 0; k < 40; k++) { var mid = (lo + hi) / 2; if (arc(mid, 80) < front) lo = mid; else hi = mid; }
+    var sag = Math.min(lo, 1.0 * face.fw);
+    var wd = cfg.mm * pxmm, scale = wd / cfg.sw, light = lightAt(sctx, cx, yTop + sag * 0.5, face.fw * 0.25), br = Math.max(0.82, Math.min(1.08, 0.55 + light / 255 * 0.62));
+    function paint(o) {
+      var N = 400, pts = [];
+      for (var i = 0; i <= N; i++) { var x = -a + 2 * a * i / N; pts.push({ x: x, y: sag * (1 - (x / a) * (x / a)) }); }
+      o.save(); o.translate(cx, yTop); o.rotate(face.roll * 0.45);
+      var s0 = 0, v = 0;
+      for (var j = 1; j <= N; j++) {
+        var p0 = pts[j - 1], p1 = pts[j], dx = p1.x - p0.x, dy = p1.y - p0.y, ds = Math.hypot(dx, dy), t = Math.atan2(dy, dx), f = j / N;
+        var edge = Math.min(1, f / 0.07, (1 - f) / 0.07);
+        var hs = ds / scale;
+        o.save(); o.translate(p0.x, p0.y); o.rotate(t - Math.PI / 2); o.globalAlpha = Math.max(0, edge);
+        var vv = v % th, h1 = Math.min(hs, th - vv);
+        o.drawImage(img, 0, vv, tw, h1, -wd * tw / cfg.sw / 2, 0, wd * tw / cfg.sw, h1 * scale + 0.9);
+        if (h1 < hs) o.drawImage(img, 0, 0, tw, hs - h1, -wd * tw / cfg.sw / 2, h1 * scale, wd * tw / cfg.sw, (hs - h1) * scale + 0.9);
+        o.restore(); v += hs;
+      }
+      o.restore();
+    }
+    return {
+      draw: function (ctx) {
+        var oc = document.createElement('canvas'); oc.width = ctx.canvas.width; oc.height = ctx.canvas.height; paint(oc.getContext('2d'));
+        ctx.save(); ctx.shadowColor = 'rgba(30,12,6,.4)'; ctx.shadowBlur = 1.4 * pxmm; ctx.shadowOffsetX = 0.4 * pxmm; ctx.shadowOffsetY = 1.1 * pxmm;
+        ctx.filter = 'brightness(' + br.toFixed(3) + ') contrast(1.02)'; ctx.drawImage(oc, 0, 0); ctx.restore();
+      }
+    };
+  }
+
+  var KINDS = { earring: earrings, set: necklace, necklace: necklace, bracelet: bracelet, chain: chain };
   window.NJTry = {
     has: function (id) { return !!D[id]; },
     kind: function (id) { return D[id] && D[id].kind; },

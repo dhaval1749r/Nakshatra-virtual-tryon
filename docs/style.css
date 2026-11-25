@@ -259,3 +259,13 @@ footer .brand{margin-bottom:14px}
 .hero .ctas .btn.ghost{border-radius:99px;padding:18px 28px;border-color:rgba(212,169,74,.5)}
 .hero .ctas{flex-direction:column;align-items:stretch;max-width:420px}
 .hero .ctas .btn.gold{border-radius:99px}
+
+/* ---- v4: one collection ---- */
+.card .sigb{position:absolute;left:10px;top:10px;padding:5px 11px;border-radius:999px;background:linear-gradient(90deg,#efe0b0,#c9a232);color:#1c1306;font:700 .68rem var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.card.sig{border-color:var(--gold);box-shadow:0 0 0 1px rgba(230,201,104,.35),0 10px 30px rgba(0,0,0,.45)}
+.tryband .kinds{grid-template-columns:repeat(2,1fr);margin:18px auto;max-width:560px}
+.tryband .kinds button{background:#f9efe4;color:var(--ink);border-color:var(--lline)}
+.ctas.tc{align-items:center}
+.tryband .showcase{grid-template-columns:repeat(6,1fr);gap:8px;margin-top:26px}
+.tryband .showcase div{border-radius:16px;aspect-ratio:1/1.15;border-color:var(--lline)}
+@media (min-width:760px){.tryband .kinds{grid-template-columns:repeat(3,1fr);max-width:760px}}

@@ -22,10 +22,8 @@
   </div>
   <nav class="menu" id="menu" hidden aria-label="Sections">
     <a href="#top">Home</a>
+    <a href="#collection">Jewellery</a>
     <a href="#tryon">Virtual Try-On</a>
-    <a href="#ultra">Ultra Premium</a>
-    <a href="#premium">Premium</a>
-    <a href="#normal">Normal</a>
     <a href="#stylist">Chatbot</a>
     <a href="#contact">Order / Contact</a>
   </nav>
@@ -37,46 +35,35 @@
     <h1>Crafted in starlight, worn with majesty</h1>
     <p class="sub">Discover Nakshatra's curated house of fine gold, diamonds and heritage jewellery. Now with an <b class="gl">AI Virtual Try-On</b> — upload your photo and see each piece adorn you.</p>
     <div class="ctas">
-      <a class="btn ghost" href="#ultra">Explore Collections →</a>
+      <a class="btn ghost" href="#collection">Explore Collections →</a>
       <button class="btn gold tryglow" type="button" data-open-studio>✦ Launch AI Try-On</button>
       <button class="btn ghost" type="button" data-open-chat>Ask AI Stylist</button>
     </div>
-    <div class="stats"><div><b>70+</b><span>Designs</span></div><div><b>20</b><span>Try-on pieces</span></div><div><b>1 tap</b><span>WhatsApp order</span></div></div>
+    <div class="stats"><div><b>70+</b><span>Designs</span></div><div><b>36</b><span>Try-on pieces</span></div><div><b>1 tap</b><span>WhatsApp order</span></div></div>
   </section>
 
-  <section class="tryband" id="tryon">
-    <p class="eyebrow">✦ Virtual Try-On</p>
+  <section id="collection" class="band dark">
+    <p class="eyebrow">✦ The Collection</p>
+    <h2>Our jewellery</h2>
+    <p class="lead2 c">Rings, earrings, bracelets, chains, kadas, necklaces and statement sets. Slide sideways, or open a category to see everything.</p>
+    <div class="filters dk" id="cFilters" role="group" aria-label="Jewellery categories"></div>
+    <div class="track" id="cTrack"></div>
+  </section>
+
+  <section class="band light tryband" id="tryon">
+    <p class="eyebrow dark">✦ Virtual Try-On</p>
     <h2>Wear it before you buy it</h2>
+    <p class="lead">Try rings, earrings, bracelets, chains, necklaces and full sets on your own photo.</p>
     <div class="kinds" id="kinds">
       <button type="button" data-kind="Rings"><span>💍</span>Rings</button>
       <button type="button" data-kind="Earrings"><span>✨</span>Earrings</button>
-      <button type="button" data-kind="Bracelets"><span>⌚</span>Bracelets</button>
+      <button type="button" data-kind="Bracelets"><span>⌚</span>Bracelets &amp; kadas</button>
+      <button type="button" data-kind="Chains"><span>🔗</span>Chains</button>
+      <button type="button" data-kind="Necklaces"><span>📿</span>Necklaces</button>
       <button type="button" data-kind="Sets"><span>👑</span>Necklace sets</button>
     </div>
+    <div class="ctas tc"><button class="btn gold tryglow" type="button" data-open-studio>✦ Open Try-On Studio</button></div>
     <div class="showcase" id="showcase" aria-hidden="true"></div>
-  </section>
-
-  <section id="ultra" class="ultra">
-    <p class="eyebrow">✦ Ultra Premium Collection</p>
-    <h2>Signature statement sets</h2>
-    <p class="lead2">Necklace with matching earrings, made for weddings and the evenings you remember. Try them on you.</p>
-    <div class="track sets" id="sets"></div>
-  </section>
-
-  <section id="premium" class="band light">
-    <p class="eyebrow dark">Premium Jewellery</p>
-    <h2>Premium collection</h2>
-    <p class="lead">Rings, bracelets and earrings with virtual try-on.</p>
-    <div class="filters" id="pFilters" role="group" aria-label="Premium filter"></div>
-    <div class="track" id="pTrack"></div>
-  </section>
-
-  <section id="normal" class="band dark">
-    <p class="eyebrow">Normal Jewellery</p>
-    <h2>Normal collection</h2>
-    <p class="lead2 c">Rings, chains, earrings, kadas and necklaces for every day.</p>
-    <div class="filters dk" id="nFilters" role="group" aria-label="Collection filter"></div>
-    <div class="track" id="nTrack"></div>
   </section>
 
   <section class="band light" id="why">
@@ -95,7 +82,7 @@
       <h3>Ask our concierge</h3>
       <p>Which piece for a gift, a wedding or every day? Ask in English, Hindi or Hinglish and get picks from our collection.</p>
       <div class="bubble me">Shaadi ke liye kuch bataiye</div>
-      <div class="bubble bot">Hamare Ultra Premium Sets dekhiye. Chahe to main aapko Set 02 aur Set 03 dikha deta hu.</div>
+      <div class="bubble bot">Hamare statement sets dekhiye. Chahe to main aapko Set 02 aur Set 03 dikha deta hu.</div>
       <button class="btn dark" type="button" data-open-chat>Start chatting →</button>
     </div>
   </section>
