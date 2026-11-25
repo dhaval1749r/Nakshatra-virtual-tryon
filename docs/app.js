@@ -195,10 +195,19 @@
     ox.globalCompositeOperation = 'source-atop';
     ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);
     var eg = ox.createLinearGradient(0, 0, pw, 0); eg.addColorStop(0, 'rgba(30,14,8,.42)'); eg.addColorStop(0.16, 'rgba(30,14,8,0)'); eg.addColorStop(0.84, 'rgba(30,14,8,0)'); eg.addColorStop(1, 'rgba(30,14,8,.42)'); ox.fillStyle = eg; ox.fillRect(0, 0, pw, ph);   // the ring curves away at both sides of the finger   // a little skin colour reflected in the silver
+    // wrap the ring round the finger: the sides turn away and drop, like a cylinder seen from above
+    var T = 0.95, drop = pw * 0.07, pad = Math.ceil(drop) + 2, wc = document.createElement('canvas'); wc.width = pw; wc.height = ph + pad * 2;
+    var wx = wc.getContext('2d'); wx.imageSmoothingQuality = 'high';
+    var sT = Math.sin(T), cT = 1 - Math.cos(T);
+    for (var ci = 0; ci < pw; ci++) {
+      var u = (ci + 0.5) / pw * 2 - 1, X = (pw / 2) * (1 + Math.sin(u * T) / sT), X2 = (pw / 2) * (1 + Math.sin(((ci + 1.5) / pw * 2 - 1) * T) / sT);
+      var dy = drop * (1 - Math.cos(u * T)) / cT, k = 1 - 0.1 * Math.abs(u);
+      wx.drawImage(oc, ci, 0, 1, ph, X, pad + dy + ph * (1 - k) / 2, Math.max(1.2, X2 - X + 0.4), ph * k);
+    }
     ctx.shadowColor = 'rgba(15,6,3,.22)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;      // small tight shadow where the setting touches the skin
-    ctx.drawImage(oc, -pw / 2, -ph / 2);
+    ctx.drawImage(wc, -pw / 2, -ph / 2 - pad);
     ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
-    ctx.drawImage(oc, -pw / 2, -ph / 2);
+    ctx.drawImage(wc, -pw / 2, -ph / 2 - pad);
     ctx.restore();
   }
 
