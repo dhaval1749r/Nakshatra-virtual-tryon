@@ -212,10 +212,22 @@
       var dy = drop * (1 - Math.cos(u * T)) / cT, k = 1 - 0.1 * Math.abs(u);
       wx.drawImage(oc, ci, 0, 1, ph, X, pad + dy + ph * (1 - k) / 2, Math.max(1.2, X2 - X + 0.4), ph * k);
     }
+    // the ring goes round the finger: whatever sticks out past the finger's edge is cut away, and it turns dark as it rolls away at the sides
+    var chh = FINGER_MM * mm * 0.5 * 0.97, mx0 = pw / 2 - chh, mx1 = pw / 2 + chh;
+    var g1 = wx.createLinearGradient(mx0, 0, mx1, 0); g1.addColorStop(0, 'rgba(0,0,0,0)'); g1.addColorStop(0.05, 'rgba(0,0,0,.9)'); g1.addColorStop(0.1, 'rgba(0,0,0,1)'); g1.addColorStop(0.9, 'rgba(0,0,0,1)'); g1.addColorStop(0.95, 'rgba(0,0,0,.9)'); g1.addColorStop(1, 'rgba(0,0,0,0)');
+    wx.globalCompositeOperation = 'destination-in'; wx.fillStyle = g1; wx.fillRect(0, 0, pw, wc.height);
+    var g2 = wx.createLinearGradient(mx0, 0, mx1, 0); g2.addColorStop(0, 'rgba(20,9,5,.6)'); g2.addColorStop(0.12, 'rgba(20,9,5,.28)'); g2.addColorStop(0.3, 'rgba(20,9,5,0)'); g2.addColorStop(0.7, 'rgba(20,9,5,0)'); g2.addColorStop(0.88, 'rgba(20,9,5,.28)'); g2.addColorStop(1, 'rgba(20,9,5,.6)');
+    wx.globalCompositeOperation = 'source-atop'; wx.fillStyle = g2; wx.fillRect(0, 0, pw, wc.height);
+    var gr = document.createElement('canvas'); gr.width = gr.height = 96; var gx = gr.getContext('2d'), gd = gx.createImageData(96, 96);   // a little grain, like the rest of the photo
+    for (var gi = 0; gi < gd.data.length; gi += 4) { var gv = Math.random() < 0.5 ? 0 : 255; gd.data[gi] = gd.data[gi + 1] = gd.data[gi + 2] = gv; gd.data[gi + 3] = 20; }
+    gx.putImageData(gd, 0, 0); wx.fillStyle = wx.createPattern(gr, 'repeat'); wx.fillRect(0, 0, pw, wc.height);
+    wx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.beginPath(); ctx.rect(-chh * 1.04, -ph * 3, chh * 2.08, ph * 6); ctx.clip();               // shadows only fall on the finger, never on the background beside it
     ctx.shadowColor = 'rgba(15,6,3,.22)'; ctx.shadowBlur = 0.9 * mm; ctx.shadowOffsetY = 0.5 * mm;      // small tight shadow where the setting touches the skin
     ctx.drawImage(wc, -pw / 2, -ph / 2 - pad);
     ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 2.6 * mm; ctx.shadowOffsetY = 0.9 * mm;
     ctx.drawImage(wc, -pw / 2, -ph / 2 - pad);
+    ctx.restore();
     ctx.restore();
   }
 
@@ -238,9 +250,11 @@
   /* soft dark patch on the skin under the stone, where the ring lifts off the finger */
   function contactShadow(mm, s, p) {
     var hw = p.widthMm * mm * 0.62, hh = p.widthMm * (p.ch / p.cw) * mm * 0.55;
-    ctx.save(); ctx.translate(0, mm * 1.1); ctx.scale(1, hh / hw);
+    var fh = FINGER_MM * mm * 0.5 * 0.94; hw = Math.min(hw, fh * 0.98);                                // never wider than the finger
+    ctx.save(); ctx.beginPath(); ctx.rect(-fh, -hh * 4, fh * 2, hh * 8); ctx.clip();
+    ctx.translate(0, mm * 1.1); ctx.scale(1, hh / hw);
     var g = ctx.createRadialGradient(0, 0, hw * 0.25, 0, 0, hw);
-    g.addColorStop(0, 'rgba(25,10,5,.34)'); g.addColorStop(0.6, 'rgba(25,10,5,.16)'); g.addColorStop(1, 'rgba(25,10,5,0)');
+    g.addColorStop(0, 'rgba(25,10,5,.26)'); g.addColorStop(0.6, 'rgba(25,10,5,.11)'); g.addColorStop(1, 'rgba(25,10,5,0)');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, hw, 0, 7); ctx.fill(); ctx.restore();
   }
 
