@@ -322,19 +322,26 @@
     await h.initialize();
     handsLib = h; return h;
   }
+  var handMemo = null;                                                        // the hand is found once per photo, so Retry gives the same placement
   async function detect() {
+    if (handMemo && handMemo.photo === photo) return handMemo.val;
     var h = await getHands();
     var c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').drawImage(photo, 0, 0, W, H);
-    var res = await new Promise(function (resolve, reject) {
-      resolveRun = resolve;
-      h.send({ image: c }).catch(reject);
-      setTimeout(function () { if (resolveRun) { resolveRun = null; reject(new Error('timeout')); } }, 60000);
-    });
+    function once() {
+      return new Promise(function (resolve, reject) {
+        resolveRun = resolve;
+        h.send({ image: c }).catch(reject);
+        setTimeout(function () { if (resolveRun) { resolveRun = null; reject(new Error('timeout')); } }, 60000);
+      });
+    }
+    var res = await once();                                                   // first pass finds the hand, the second pass (tracking) settles the landmarks on it
+    if (res && res.multiHandLandmarks && res.multiHandLandmarks.length) { try { var res2 = await once(); if (res2 && res2.multiHandLandmarks && res2.multiHandLandmarks.length) res = res2; } catch (e2) { /* keep the first pass */ } }
     var hs = (res && res.multiHandLandmarks) || [];
     if (!hs.length) return null;
     var best = null, bestW = 0;
     hs.forEach(function (lm) { var w = Math.hypot((lm[5].x - lm[17].x) * W, (lm[5].y - lm[17].y) * H); if (w > bestW) { bestW = w; best = lm; } });
-    return { lm: best, palm: bestW };
+    var out = { lm: best, palm: bestW }; handMemo = { photo: photo, val: out };
+    return out;
   }
   /* Inside the Claude preview page the hand files cannot be loaded, so Claude finds the finger from the photo instead. */
   var FIND_PROMPT = 'This photo shows a hand. Look at the hand closest to the camera. List its four fingers other than the thumb, in order starting from the finger next to the thumb: index, middle, ring, little. ' +
@@ -374,7 +381,20 @@
       var j = (yi * W + xi) * 4, dr = d[j] - m[0], dg = d[j + 1] - m[1], db = d[j + 2] - m[2];
       return Math.sqrt(dr * dr + dg * dg + db * db) < tol;
     }
-    function run(px, py, dx, dy) { var t = 0; while (t < maxRun && inSkin(px + dx * t, py + dy * t)) t += 1.5; return t; }
+    var tolW = Math.min(115, tol * 1.9);
+    function col(px, py) { var xi = Math.max(0, Math.min(W - 1, Math.round(px))), yi = Math.max(0, Math.min(H - 1, Math.round(py))), j = (yi * W + xi) * 4; return [d[j], d[j + 1], d[j + 2]]; }
+    function skinW(px, py) { var c = col(px, py), dr = c[0] - m[0], dg = c[1] - m[1], db = c[2] - m[2]; return Math.sqrt(dr * dr + dg * dg + db * db) < tolW; }
+    function run(px, py, dx, dy) {                                           // walk until the colour leaves the skin range or jumps (an edge): gentle shading on the finger is allowed
+      var t = 0, prev = col(px, py);
+      while (t < maxRun) {
+        var x1 = px + dx * t, y1 = py + dy * t; if (!skinW(x1, y1)) break;
+        var c = col(x1, y1), jr = c[0] - prev[0], jg = c[1] - prev[1], jb = c[2] - prev[2];
+        if (t >= 3 && Math.sqrt(jr * jr + jg * jg + jb * jb) > 52) break;
+        if (((t / 1.5) | 0) % 2 === 0) prev = c;
+        t += 1.5;
+      }
+      return t;
+    }
     var cx = X, cy = Y, best = null;
     for (var it = 0; it < 3; it++) {
       best = null;
@@ -436,7 +456,10 @@
   /* measure the finger under a point and put the ring where it really sits: on the middle line, just above the knuckle web */
   function fitToFinger(x, y, hint, fwEst, lo, hi, webPt) {
     var rf = refineAt(x, y, hint, fwEst);
+    cv.setAttribute('data-fit', rf ? 'range ' + Math.round(rf.fw) + ' vs ' + Math.round(fwEst) : 'null');
     if (!rf || rf.fw < lo * fwEst || rf.fw > hi * fwEst) return null;
+    var r0 = rf.heading * Math.PI / 180, r2 = refineAt(rf.x + Math.sin(r0) * 0.7 * rf.fw, rf.y - Math.cos(r0) * 0.7 * rf.fw, hint, rf.fw);   // a second measurement further up the finger must agree, else two fingers may have merged
+    if (r2 && Math.abs(r2.fw - rf.fw) > 0.3 * rf.fw) return null;
     cv.setAttribute('data-fit', [Math.round(rf.x), Math.round(rf.y), Math.round(rf.heading), Math.round(rf.fw)].join(','));
     var rad = rf.heading * Math.PI / 180, ux = Math.sin(rad), uy = -Math.cos(rad), px = rf.x, py = rf.y;
     if (webPt) {                                                              // the web (where the finger joins the hand) is known: the ring sits 0.75 finger-widths above it, on the middle line
@@ -456,8 +479,16 @@
       cv.setAttribute('data-lm', [5,9,13,14,17].map(function (i) { return Math.round(hand.lm[i].x * W) + ':' + Math.round(hand.lm[i].y * H); }).join(' '));
       ppm = hand.palm / 74;   // index knuckle to little-finger knuckle is about 68 mm
       var hx = Math.sin(ring.heading * Math.PI / 180), hy = -Math.cos(ring.heading * Math.PI / 180);
-      var fit = fitToFinger(ring.x, ring.y, { dx: hx, dy: hy }, FINGER_MM * ppm, 0.7, 1.45);   // measure the real finger in this photo: width, middle line and where it joins the hand
-      if (fit) { ring.x = fit.x; ring.y = fit.y; ring.heading = fit.heading; ppm = fit.fw * 1.08 / FINGER_MM; }
+      // measure the real finger from the pixels: try a few spots along the finger (the first one can sit on the shadow between two fingers)
+      var fit = null, tryT = [0.52, 0.7, 0.85, 0.38], ti, sx0, sy0;
+      for (ti = 0; ti < tryT.length && !fit; ti++) {
+        sx0 = ax + tryT[ti] * (bx - ax); sy0 = ay + tryT[ti] * (by - ay);
+        fit = fitToFinger(sx0, sy0, { dx: hx, dy: hy }, FINGER_MM * ppm, 0.6, 2.6);
+      }
+      if (fit) {
+        var fr = fit.heading * Math.PI / 180, fux = Math.sin(fr), fuy = -Math.cos(fr), along = (ring.x - fit.x) * fux + (ring.y - fit.y) * fuy;
+        ring.x = fit.x + fux * along; ring.y = fit.y + fuy * along; ring.heading = fit.heading; ppm = fit.fw * 1.08 / FINGER_MM;   // stay on the middle line of the finger, at the usual spot
+      }
       placed = true;
     } else {
       var cl = null;
