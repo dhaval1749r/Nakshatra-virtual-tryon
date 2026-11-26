@@ -5,7 +5,7 @@
 window.NAKSHATRA_TRYON = {
   space: "dhaval1749r/nakshatra-ai-tryon",
   api: "",
-  useAI: false   // false = place the real ring photo on your finger on the device (photo and background stay unchanged). true = let the AI service redraw the photo.
+  useAI: true   // true = try the free AI service first (real fitting, shadow and light), and fall back to the on-device placement if it is busy or not reachable. false = on-device placement only.
 };
 
 /* Shop details shown on the website. Edit here. */

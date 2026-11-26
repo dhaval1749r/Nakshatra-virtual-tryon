@@ -554,20 +554,32 @@
     try { var r = await fetch(url); if (!r.ok) throw new Error('http ' + r.status); return { blob: await r.blob() }; }
     catch (err) { return { url: url }; }       // the image host may not allow reading; we can still show it
   }
+  function aiCat() { var c = ((catItem[selId] || {}).cat) || 'Rings'; return /earring/i.test(c) ? 'earrings' : /bracelet|kada/i.test(c) ? 'bracelet' : /chain|necklace|set/i.test(c) ? 'necklace' : 'ring'; }
+  function catalogBlob(id) {
+    return new Promise(function (res, rej) {
+      var im = new Image(); im.onload = function () {
+        var c = document.createElement('canvas'); c.width = c.height = 1024; var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1024, 1024);
+        var k = Math.min(940 / im.naturalWidth, 940 / im.naturalHeight); x.imageSmoothingQuality = 'high';
+        x.drawImage(im, (1024 - im.naturalWidth * k) / 2, (1024 - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k); toBlob(c, 'image/jpeg', 0.93).then(res, rej);
+      }; im.onerror = function () { rej(new Error('piece photo')); }; im.src = (catItem[id] || {}).img;
+    });
+  }
   async function aiGenerate() {
-    var jb = await jewelleryBlob();
+    var cat = aiCat();
+    var jb = cat === 'ring' && cuts[sel.id] ? await jewelleryBlob() : await catalogBlob(selId);
     var customer = new File([photoBlob], 'customer-photo.jpg', { type: 'image/jpeg' });
     var jewel = new File([jb], sel.id + '.jpg', { type: 'image/jpeg' });
     if (API) {
-      var form = new FormData(); form.append('customer_photo', customer); form.append('jewellery_photo', jewel); form.append('category', 'ring');
+      var form = new FormData(); form.append('customer_photo', customer); form.append('jewellery_photo', jewel); form.append('category', cat);
       var r = await fetch(API + '/api/felo/try-on', { method: 'POST', body: form });
       if (!r.ok) { var m = 'AI service error'; try { m = (await r.json()).detail || m; } catch (e) {} throw new Error(m); }
       return { blob: await r.blob() };
     }
     if (!SPACE) throw new Error('AI try-on is not connected');
-    var mod = await import(GRADIO);
-    var client = await mod.Client.connect(SPACE);
-    var res = await client.predict('/try_on', [customer, jewel, 'ring']);
+    var giveUp = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('AI service not reachable')); }, 30000); });
+    var mod = await Promise.race([import(GRADIO), giveUp]);
+    var client = await Promise.race([mod.Client.connect(SPACE), giveUp]);
+    var res = await client.predict('/try_on', [customer, jewel, cat]);
     var out = res && res.data && res.data[0], url = typeof out === 'string' ? out : (out && (out.url || out.path));
     if (!url) throw new Error('AI service returned no image');
     return fetchResult(url);
@@ -596,11 +608,21 @@
     var name = (catItem[selId] || {}).name || 'piece', err = null;
     setBusy(true, 'Placing ' + name + ' on you…'); setStatus('Generating…');
     var wait = new Promise(function (r) { setTimeout(r, 1500); });
-    try { overlay = await window.NJTry.run(selId, photo, W, H, photoBlob); } catch (e) { err = e; overlay = null; }
+    var aiDone = false;
+    if (!!(API || SPACE) && CFG.useAI === true) {
+      try {
+        setBusy(true, 'Creating your try-on with AI. This can take up to a minute. Please keep this page open.');
+        var tmo = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 270000); });
+        var o2 = await Promise.race([aiGenerate(), tmo]);
+        if (o2.blob) await showImage(URL.createObjectURL(o2.blob)); else { openUrl = o2.url; await showImage(o2.url).catch(function () { photo = originalPhoto; }); }
+        aiDone = true; overlay = null;
+      } catch (e2) { if (window.console) console.warn('AI try-on failed:', e2); photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; setBusy(true, 'Placing ' + name + ' on you…'); }
+    }
+    if (!aiDone) { try { overlay = await window.NJTry.run(selId, photo, W, H, photoBlob); } catch (e) { err = e; overlay = null; } }
     await wait; draw();
     setBusy(false); generating = false; $('#generate').disabled = false; $('#generate').textContent = '✦ Generate try-on';
     if (err) setStatus(err.message && !/^(image |load |timeout|no try)/.test(err.message) ? err.message : 'Sorry, I could not place this piece on that photo. Please try a clearer photo.', true);
-    else { setStatus('Your try-on is ready. Colours can look slightly different on screen.'); $('#save').disabled = false; $('#shareWa').disabled = false; }
+    else { setStatus(aiDone ? 'Your AI try-on is ready. Please check the piece details against the real piece.' : 'Your try-on is ready. Colours can look slightly different on screen.'); $('#save').disabled = false; $('#shareWa').disabled = false; }
   }
   async function generate() {
     if (!photo || generating) return;
@@ -610,7 +632,7 @@
     generating = true; $('#generate').disabled = true; $('#save').disabled = true; openUrl = null;
     if (originalPhoto) { photo = originalPhoto; W = photo.width; H = photo.height; cv.width = W; cv.height = H; }
     var inClaude = !!(window.claude && window.claude.use);          // the Claude preview page cannot reach the AI service
-    var useAI = !inClaude && !!(API || SPACE) && CFG.useAI === true, done = false;   // AI image model only when config.js turns it on; the default keeps your photo exactly as it is
+    var useAI = !!(API || SPACE) && CFG.useAI === true, done = false;   // AI image model only when config.js turns it on; the default keeps your photo exactly as it is
     try {
       if (useAI) {
         setBusy(true, 'Creating your try-on with AI. This can take up to a minute. Please keep this page open.');
