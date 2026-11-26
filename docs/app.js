@@ -198,7 +198,7 @@
     var pw = Math.max(2, Math.round(sel.cw * s)), ph = Math.max(2, Math.round(sel.ch * s));
     var oc = document.createElement('canvas'); oc.width = pw; oc.height = ph;
     var ox = oc.getContext('2d'); ox.imageSmoothingQuality = 'high';
-    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97)';
+    ox.filter = 'brightness(' + sk.light.toFixed(3) + ') contrast(.97) blur(' + Math.max(0.25, Math.min(0.9, pw / 260)).toFixed(2) + 'px)';   // as soft as the rest of the photo
     ox.drawImage(img, 0, 0, pw, ph); ox.filter = 'none';
     ox.globalCompositeOperation = 'source-atop';
     ox.fillStyle = 'rgba(' + sk.r + ',' + sk.g + ',' + sk.b + ',.13)'; ox.fillRect(0, 0, pw, ph);
@@ -244,7 +244,7 @@
     if (!n) return { r: 180, g: 130, b: 110, light: 1 };
     r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
     var lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    return { r: r, g: g, b: b, light: Math.max(0.72, Math.min(1.04, 0.62 + lum / 330)) };
+    return { r: r, g: g, b: b, light: Math.max(0.58, Math.min(1.04, 0.42 + lum / 250)) };
   }
 
   /* soft dark patch on the skin under the stone, where the ring lifts off the finger */
@@ -501,7 +501,11 @@
       }
       if (fit) {
         var fr = fit.heading * Math.PI / 180, fux = Math.sin(fr), fuy = -Math.cos(fr), along = (ring.x - fit.x) * fux + (ring.y - fit.y) * fuy;
-        ring.x = fit.x + fux * along; ring.y = fit.y + fuy * along; ring.heading = fit.heading; ppm = fit.fw * 1.08 / FINGER_MM;   // stay on the middle line of the finger, at the usual spot
+        ring.x = fit.x + fux * along; ring.y = fit.y + fuy * along; ring.heading = fit.heading; // stay on the middle line of the finger, at the usual spot
+        // cross-check the pixel measurement with the hand's own proportions (finger segment length and palm width), so dark or hairy skin cannot make the ring tiny
+        var seg = Math.hypot(bx - ax, by - ay), expFw = (seg * 0.4 + FINGER_MM * hand.palm / 74) / 2, fwUse = Math.max(expFw * 0.85, Math.min(expFw * 1.2, fit.fw));
+        ppm = fwUse * 1.08 / FINGER_MM;
+        cv.setAttribute('data-fw', [Math.round(fit.fw), Math.round(expFw), Math.round(fwUse)].join(','));
       }
       placed = true;
     } else {

@@ -184,10 +184,52 @@
     var width = r.width * W;
     return { c: { x: r.wrist.x * W, y: r.wrist.y * H }, fx: dx / l, fy: dy / l, width: width, pxmm: width / 56, src: 'claude' };
   }
+  /* measure the real width of the wrist/forearm from the pixels: walk sideways from the centre until the skin ends */
+  function measureArm(canvas, w, W, H) {
+    var g; try { g = canvas.getContext('2d'); } catch (e) { return w; }
+    var px = -w.fy, py = w.fx, R0 = w.width / 2, best = null;
+    function line(cx, cy) {
+      var N = Math.round(R0 * 2.4), arr = [];
+      for (var t = -N; t <= N; t++) {
+        var r = 0, gg = 0, b = 0, n = 0;
+        for (var k = -4; k <= 4; k += 2) {
+          var x = Math.round(cx + px * t + w.fx * k), y = Math.round(cy + py * t + w.fy * k);
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          var d = g.getImageData(x, y, 1, 1).data; r += d[0]; gg += d[1]; b += d[2]; n++;
+        }
+        arr.push(n ? [r / n, gg / n, b / n] : null);
+      }
+      var m = [0, 0, 0], c = 0;
+      for (var i = N - Math.round(R0 * 0.25); i <= N + Math.round(R0 * 0.25); i++) if (arr[i]) { m[0] += arr[i][0]; m[1] += arr[i][1]; m[2] += arr[i][2]; c++; }
+      if (!c) return null; m = [m[0] / c, m[1] / c, m[2] / c];
+      function edge(dir) {
+        var run = 0, lastOk = 0;
+        for (var j = 1; j <= N; j++) {
+          var p = arr[N + dir * j]; if (!p) break;
+          var diff = Math.abs(p[0] - m[0]) + Math.abs(p[1] - m[1]) + Math.abs(p[2] - m[2]);
+          if (diff > 70) { run++; if (run >= 5) return j - 5; } else { run = 0; lastOk = j; }
+        }
+        return lastOk;
+      }
+      return { l: edge(-1), r: edge(1) };
+    }
+    // measure where the skin is plain (a little towards the hand and further along the forearm), because a bangle or thread at the wrist itself would fool the edge search
+    var got = [];
+    [-0.55, 0.8, 1.1, 1.4].forEach(function (o) {
+      var e = line(w.c.x + w.fx * o * R0 * 2 * 0.5, w.c.y + w.fy * o * R0 * 2 * 0.5);
+      if (e && e.l + e.r > R0 * 1.3 && e.l + e.r < R0 * 3.6) got.push(e);
+    });
+    if (!got.length) return w;
+    var ws = got.map(function (e) { return e.l + e.r; }).sort(function (x, y) { return x - y; }), med = ws[Math.floor(ws.length / 2)];
+    var sh = got.map(function (e) { return (e.r - e.l) / 2; }).sort(function (x, y) { return x - y; })[Math.floor(got.length / 2)];
+    var width = med * 0.95, shift = Math.max(-R0 * 0.4, Math.min(R0 * 0.4, sh));
+    return { c: { x: w.c.x + px * shift, y: w.c.y + py * shift }, fx: w.fx, fy: w.fy, width: width, pxmm: width / 58, src: w.src + '+px' };
+  }
   async function findWrist(canvas, blob, W, H) {
     var w = null;
     try { w = await wristMP(canvas, W, H); } catch (e) { w = null; }
     if (!w) { try { w = await wristClaude(blob, W, H); } catch (e) { w = null; } }
+    if (w) { try { w = measureArm(canvas, w, W, H); } catch (e) { /* keep the estimate */ } }
     return w;
   }
   async function bracelet(item, cfg, photo, W, H, blob) {
